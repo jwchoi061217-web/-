@@ -33,35 +33,28 @@ SOON_DAYS = 7
 GOV_OPEN_PER_SOURCE = 10
 
 EXTRA_CSS = """
-.num{display:inline-block;min-width:38px;color:var(--muted);
-  font-size:14px;font-weight:700;letter-spacing:1.5px}
-.srcgrp{display:flex;align-items:baseline;gap:var(--s-sm);
-  color:var(--on-dark);margin:var(--s-xl) 0 var(--s-sm);
-  padding-bottom:var(--s-xs);border-bottom:1px solid var(--hairline-strong);
-  font-size:14px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase}
-.srcgrp .n{color:var(--muted);font-weight:300;letter-spacing:.5px}
-details.more{margin:0 0 var(--s-md)}
-details.more>summary{cursor:pointer;list-style:none;color:var(--on-dark);
-  background:transparent;border:1px solid var(--hairline);border-radius:var(--r-none);
-  padding:16px 32px;display:inline-block;min-height:48px;
-  font-size:14px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase}
+.num{display:inline-block;min-width:34px;color:var(--yellow);font-size:15px;font-weight:800}
+.srcgrp{display:flex;align-items:baseline;gap:var(--s-xs);
+  color:var(--brown);margin:var(--s-lg) 0 var(--s-sm);
+  font-size:14px;font-weight:800}
+.srcgrp .n{color:var(--n-600);font-weight:500}
+details.more{margin:0 0 var(--s-sm)}
+details.more>summary{cursor:pointer;list-style:none;color:var(--brown);
+  background:var(--n-50);border-radius:var(--r-full);
+  padding:12px 24px;display:inline-block;font-size:14px;font-weight:700}
 details.more>summary::-webkit-details-marker{display:none}
-details.more[open]>summary{margin-bottom:var(--s-md)}
-.warn{background:var(--surface-soft);border:1px solid var(--warning);
-  border-radius:var(--r-none);padding:var(--s-md) var(--s-lg);
-  color:var(--body-strong);margin:var(--s-md) 0;
-  font-size:14px;font-weight:300;line-height:1.6}
-.summary{background:var(--surface-soft);border:1px solid var(--hairline-strong);
-  border-radius:var(--r-none);padding:var(--s-lg);margin:var(--s-md) 0}
-.summary .lbl{color:var(--muted);margin-bottom:var(--s-sm);
-  font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase}
-.detail-title{margin:0 0 var(--s-md)}
-.detail-meta{color:var(--muted);margin:0 0 var(--s-xl);font-weight:300}
-.dash-link{display:block;background:var(--surface-card);
-  border:1px solid var(--hairline-strong);border-radius:var(--r-none);
-  padding:var(--s-lg);margin-bottom:var(--s-lg);color:var(--on-dark)}
-.dash-link:active{border-color:var(--on-dark)}
-.dash-link .sub{color:var(--body);margin-top:var(--s-xs);font-weight:300}
+details.more[open]>summary{margin-bottom:var(--s-sm)}
+.warn{background:#FFF8E6;border:1px solid var(--yellow);border-radius:var(--r-md);
+  padding:var(--s-sm) var(--s-md);color:var(--n-900);margin:var(--s-sm) 0;font-size:14px}
+.summary{background:var(--n-50);border-radius:var(--r-lg);
+  padding:var(--s-lg);margin:var(--s-md) 0}
+.summary .lbl{color:var(--n-600);margin-bottom:6px;font-size:13px;font-weight:700}
+.detail-title{margin:0 0 var(--s-sm)}
+.detail-meta{color:var(--n-600);margin:0 0 var(--s-lg);font-size:14px}
+.dash-link{display:block;background:var(--blue-3);border-radius:var(--r-lg);
+  padding:var(--s-md) var(--s-lg);margin-bottom:var(--s-md);color:var(--navy)}
+.dash-link:active{background:var(--blue-2)}
+.dash-link .sub{color:#2b5580;margin-top:2px;font-size:14px}
 """
 
 
@@ -163,8 +156,8 @@ def _list_page(issue_date: date, items_by_cat: dict, cats: list, active: str,
     for cat in cats:
         items = items_by_cat.get(cat, [])
         meta = CATEGORIES[cat]
-        sections.append(f'<h2 class="sec-head t-h-lg">{meta["section"]}'
-                        f'<span class="n">{len(items)}건</span></h2>')
+        sections.append(f'<h2 class="sec-head t-h-lg">{meta["icon"]} {meta["section"]}'
+                        f'<span class="n">{len(items)}건</span></h2><hr class="rule">')
         if not items:
             sections.append('<div class="empty t-body">이번 주에는 새로 올라온 항목이 없습니다.</div>')
         elif is_gov(cat):
@@ -185,9 +178,9 @@ def _list_page(issue_date: date, items_by_cat: dict, cats: list, active: str,
     body = (theme.PROMO_BANNER
             + theme.topnav(_tabs(all_cats), active)
             + '<div class="wrap">'
-            + f'<header class="hero"><h1 class="t-hero">{esc(title)}</h1>'
+            + f'<header class="hero"><h1 class="t-hero">{esc(title)}</h1><hr class="rule">'
             + f'<p class="lede t-sub-md">{lede}</p>'
-            + f'<p class="stamp t-sm">{fmt_date_ko(issue_date)} 발행</p></header>'
+            + f'<p class="stamp">{fmt_date_ko(issue_date)} 발행</p></header>'
             + "\n".join(sections)
             + theme.PROMO_STRIP + theme.footer() + "</div>")
 

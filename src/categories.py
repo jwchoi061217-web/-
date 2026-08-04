@@ -1,4 +1,4 @@
-"""카테고리 레지스트리.
+﻿"""카테고리 레지스트리.
 
 카테고리를 추가·수정할 때 고쳐야 하는 곳은 이 파일 하나다.
 message.py / publish.py / thumbnail.py 는 전부 여기서 값을 가져다 쓴다.
@@ -17,7 +17,7 @@ CATEGORIES = {
         "kind": "news",
         "label": "HRD",
         "icon": "📚",
-        "color": "#2457C5",
+        "color": "#003362",
         "header": "📚 [모두의러닝] 주간 HRD 뉴스",
         "short": "📚 HRD",
         "tab": "📚 HRD",
@@ -31,7 +31,7 @@ CATEGORIES = {
         "kind": "news",
         "label": "산업안전",
         "icon": "🦺",
-        "color": "#E8722A",
+        "color": "#FF5F1B",
         "header": "🦺 [모두의러닝] 주간 산업안전 뉴스",
         "short": "🦺 산업안전",
         "tab": "🦺 산업안전",
@@ -45,7 +45,7 @@ CATEGORIES = {
         "kind": "gov",
         "label": "정부지원사업",
         "icon": "📢",
-        "color": "#F9524E",  # 모두의러닝 브랜드 코랄
+        "color": "#FDB515",  # 선라이트 옐로우 (모두의러닝 BI)
         "header": "📢 [모두의러닝] 이번주 정부지원사업 공고",
         "short": "📢 정부지원사업",
         "tab": "📢 지원사업",

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#000000">
+<meta name="theme-color" content="#FDB515">
 <title>2026년 모두의 창업 글로벌 프로그램 주관기관 모집 | 모두의러닝 정부지원사업 공고</title>
 <meta property="og:type" content="website">
 <meta property="og:title" content="2026년 모두의 창업 글로벌 프로그램 주관기관 모집 | 모두의러닝 정부지원사업 공고">
@@ -13,268 +13,219 @@
 <meta property="og:image:height" content="1080">
 <style>
 :root{
-  /* M 트라이컬러 — 브랜드 표식 전용, 채움 금지 */
-  --m-blue-light:#0066b1; --m-blue-dark:#1c69d4; --m-red:#e22718;
-  --bmw-blue:#1c69d4; --electric-blue:#0653b6;
-  /* Surface */
-  --canvas:#000000; --surface-soft:#0d0d0d; --surface-card:#1a1a1a;
-  --surface-elevated:#262626; --carbon-gray:#2b2b2b;
-  /* Hairline */
-  --hairline:#3c3c3c; --hairline-strong:#262626;
-  /* Text */
-  --on-dark:#ffffff; --body:#bbbbbb; --body-strong:#e6e6e6; --muted:#7e7e7e;
+  /* 모두의러닝 Brand main colors */
+  --yellow:#FDB515; --brown:#545046; --navy:#003362;
+  /* 그룹 패밀리 (긴급 표시에만 차용) */
+  --safety-orange:#FF5F1B;
+  /* Additional */
+  --blue-1:#C2C8E5; --blue-2:#C3DEE7; --blue-3:#DDECFD;
+  /* Neutral */
+  --n-50:#F5F5F5; --n-100:#EAE8E8; --n-300:#C2C2C2; --n-600:#7A7A7A; --n-900:#111111;
+  --canvas:#FFFFFF;
   /* Semantic */
-  --warning:#f4b400; --success:#0fa336;
-  /* Radius — 기본 0, 원형만 예외 */
-  --r-none:0px; --r-xs:2px; --r-sm:4px; --r-md:6px; --r-full:9999px;
+  --success:#1A8245;
+  /* Radius */
+  --r-sm:6px; --r-md:10px; --r-lg:12px; --r-xl:16px; --r-full:999px;
   /* Spacing (4px 베이스) */
   --s-xxs:4px; --s-xs:8px; --s-sm:12px; --s-md:16px; --s-lg:24px;
   --s-xl:40px; --s-xxl:64px; --s-sec:96px;
-  --font:Inter,'BMW Type Next Latin',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Malgun Gothic','Apple SD Gothic Neo','Noto Sans KR',sans-serif;
+  --font:Pretendard,'Pretendard Variable','Malgun Gothic','Apple SD Gothic Neo','Noto Sans KR',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
 }
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
-body{margin:0;background:var(--canvas);color:var(--body);font-family:var(--font);
-  font-size:16px;font-weight:300;line-height:1.5;
-  -webkit-font-smoothing:antialiased}
+body{margin:0;background:var(--canvas);color:var(--n-900);font-family:var(--font);
+  font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased;
+  word-break:keep-all}
 a{color:inherit;text-decoration:none}
 button,input,textarea,select{font-family:inherit}
-img{max-width:100%;display:block}
-::selection{background:var(--on-dark);color:var(--canvas)}
+img,svg{display:block;max-width:100%}
+::selection{background:var(--yellow);color:var(--n-900)}
 
-/* ── M 트라이컬러 스트라이프 — 시스템의 유일한 장식 요소 ── */
-.m-stripe{height:4px;width:100%;border:0;margin:0;
-  background:linear-gradient(90deg,
-    var(--m-blue-light) 0 33.33%,
-    var(--m-blue-dark) 33.33% 66.66%,
-    var(--m-red) 66.66% 100%)}
-.m-stripe-short{width:96px}
+/* ── 브랜딩북의 시그니처 장치: 라벨 아래 짧은 옐로우 룰 ── */
+.rule{display:block;width:24px;height:3px;background:var(--yellow);
+  border:0;border-radius:2px;margin:var(--s-xs) 0 var(--s-md)}
+.rule-center{margin-left:auto;margin-right:auto}
 
-/* ── Typography ────────────────────────────────────────────
-   Inter 대체 시 디스플레이 자간을 -0.5px 로 조인다(스펙 권고). */
-.t-hero{font-size:80px;font-weight:700;line-height:1.0;letter-spacing:-.5px;
-  color:var(--on-dark);text-transform:uppercase}
-.t-display{font-size:56px;font-weight:700;line-height:1.05;letter-spacing:-.5px;
-  color:var(--on-dark);text-transform:uppercase}
-.t-h-lg{font-size:40px;font-weight:700;line-height:1.1;letter-spacing:-.5px;
-  color:var(--on-dark);text-transform:uppercase}
-.t-h-md{font-size:32px;font-weight:700;line-height:1.15;letter-spacing:-.5px;
-  color:var(--on-dark);text-transform:uppercase}
-.t-h-sm{font-size:24px;font-weight:700;line-height:1.3;color:var(--on-dark)}
-.t-sub-lg{font-size:24px;font-weight:700;line-height:1.3;color:var(--on-dark)}
-.t-sub-md{font-size:20px;font-weight:400;line-height:1.4;color:var(--body-strong)}
-.t-sub-sm{font-size:18px;font-weight:400;line-height:1.4;color:var(--body-strong)}
-.t-body{font-size:16px;font-weight:300;line-height:1.5;color:var(--body)}
-.t-body-b{font-size:16px;font-weight:400;line-height:1.5;color:var(--body-strong)}
-.t-sm{font-size:14px;font-weight:300;line-height:1.5;color:var(--body)}
-.t-sm-b,.t-label{font-size:14px;font-weight:700;line-height:1.3;letter-spacing:1.5px;
-  text-transform:uppercase;color:var(--on-dark)}
-.t-cap{font-size:12px;font-weight:400;line-height:1.4;letter-spacing:.5px;color:var(--muted)}
-.t-cap-b{font-size:12px;font-weight:700;line-height:1.4;letter-spacing:.5px;color:var(--on-dark)}
+/* ── Typography ── */
+.t-hero{font-size:52px;font-weight:800;line-height:1.2;letter-spacing:-1px;color:var(--n-900)}
+.t-display{font-size:40px;font-weight:800;line-height:1.25;letter-spacing:-.8px;color:var(--n-900)}
+.t-h-lg{font-size:30px;font-weight:800;line-height:1.3;letter-spacing:-.6px;color:var(--n-900)}
+.t-h-md{font-size:24px;font-weight:700;line-height:1.35;letter-spacing:-.4px;color:var(--n-900)}
+.t-h-sm{font-size:20px;font-weight:700;line-height:1.4;letter-spacing:-.3px;color:var(--n-900)}
+.t-sub-lg{font-size:18px;font-weight:700;line-height:1.5;letter-spacing:-.2px;color:var(--n-900)}
+.t-sub-md{font-size:17px;font-weight:400;line-height:1.6;color:var(--n-600)}
+.t-body{font-size:16px;font-weight:400;line-height:1.6;color:var(--n-900)}
+.t-body-b{font-size:16px;font-weight:700;line-height:1.6;color:var(--n-900)}
+.t-sm{font-size:14px;font-weight:400;line-height:1.55;color:var(--n-600)}
+.t-sm-b{font-size:14px;font-weight:700;line-height:1.55;color:var(--n-900)}
+.t-label{font-size:13px;font-weight:700;line-height:1.4;letter-spacing:.3px;color:var(--n-600)}
+.t-cap{font-size:12px;font-weight:400;line-height:1.5;color:var(--n-600)}
+.t-cap-b{font-size:12px;font-weight:700;line-height:1.5;color:var(--n-900)}
 
-/* ── promo-banner (nav 위) ── */
-.promo-banner{background:var(--canvas);color:var(--body);
-  border-bottom:1px solid var(--hairline-strong);
+/* ── promo-banner ── */
+.promo-banner{background:var(--navy);color:#fff;
   padding:var(--s-sm) var(--s-lg);text-align:center;
-  font-size:12px;font-weight:400;line-height:1.4;letter-spacing:.5px;text-transform:uppercase}
-.promo-banner a{color:var(--on-dark);border-bottom:1px solid var(--hairline)}
+  font-size:13px;font-weight:500;line-height:1.5}
+.promo-banner a{font-weight:700;border-bottom:1px solid rgba(255,255,255,.45);
+  padding-bottom:1px}
 .promo-banner .clip{display:inline-block;max-width:100%;overflow:hidden;
   text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom}
 
 /* ── Top navigation ── */
-.topnav{position:sticky;top:0;z-index:40;background:var(--canvas);
-  border-bottom:1px solid var(--hairline-strong)}
-.nav-inner{max-width:1440px;margin:0 auto;padding:0 var(--s-xl);min-height:64px;
-  display:flex;align-items:center;gap:var(--s-xl)}
-.wordmark{display:flex;align-items:center;gap:var(--s-sm);color:var(--on-dark);
-  font-size:18px;font-weight:700;letter-spacing:.5px;white-space:nowrap;text-transform:uppercase}
-.wordmark .bar{display:block;width:28px;height:4px;
-  background:linear-gradient(90deg,var(--m-blue-light) 0 33.33%,
-    var(--m-blue-dark) 33.33% 66.66%,var(--m-red) 66.66% 100%)}
-.nav-tabs{display:flex;gap:var(--s-lg);flex:1;flex-wrap:wrap}
-.nav-right{display:flex;align-items:center;gap:var(--s-md);margin-left:auto}
-.hamburger{display:none;width:48px;height:48px;border:0;background:transparent;
-  color:var(--on-dark);font-size:20px;cursor:pointer;border-radius:var(--r-none)}
+.topnav{position:sticky;top:0;z-index:40;background:rgba(255,255,255,.96);
+  backdrop-filter:saturate(180%) blur(8px);border-bottom:1px solid var(--n-100)}
+.nav-inner{max-width:1200px;margin:0 auto;padding:0 var(--s-lg);min-height:68px;
+  display:flex;align-items:center;gap:var(--s-lg)}
+.wordmark{display:flex;align-items:center;gap:var(--s-xs);color:var(--brown);
+  font-size:19px;font-weight:800;letter-spacing:-.5px;white-space:nowrap}
+.nav-tabs{display:flex;gap:var(--s-xs);flex:1;flex-wrap:wrap}
+.nav-right{display:flex;align-items:center;gap:var(--s-sm);margin-left:auto}
+.hamburger{display:none;width:44px;height:44px;border:0;background:transparent;
+  color:var(--brown);font-size:20px;cursor:pointer;border-radius:var(--r-full)}
 
-/* category-tab — 채움 없음. 활성은 흰 글자 + 2px 밑줄 */
-.pill-tab{display:inline-flex;align-items:center;background:transparent;color:var(--body);
-  border:0;border-bottom:2px solid transparent;border-radius:var(--r-none);
-  padding:12px 0;cursor:pointer;
-  font-size:14px;font-weight:700;line-height:1.3;letter-spacing:1.5px;
-  text-transform:uppercase;white-space:nowrap}
-.pill-tab.on{color:var(--on-dark);border-bottom-color:var(--on-dark)}
-.pill-tab:active{color:var(--on-dark)}
+/* pill tab */
+.pill-tab{display:inline-flex;align-items:center;min-height:40px;
+  background:var(--n-50);color:var(--n-600);border:0;border-radius:var(--r-full);
+  padding:8px 16px;cursor:pointer;font-size:14px;font-weight:700;white-space:nowrap}
+.pill-tab.on{background:var(--yellow);color:var(--n-900)}
+.pill-tab:active{background:var(--n-100)}
+.pill-tab.on:active{background:#e5a212}
 
-/* text-input / search */
-.search-pill{background:var(--surface-card);color:var(--on-dark);
-  border:1px solid var(--hairline);border-radius:var(--r-none);
-  height:48px;padding:0 var(--s-md);width:240px;
-  font-size:16px;font-weight:300;line-height:1.5}
-.search-pill::placeholder{color:var(--muted)}
-.search-pill:focus{outline:none;border-color:var(--on-dark)}
+/* search */
+.search-pill{background:var(--n-50);color:var(--n-900);border:1px solid transparent;
+  border-radius:var(--r-full);height:44px;padding:0 var(--s-md);width:230px;
+  font-size:15px}
+.search-pill::placeholder{color:var(--n-600)}
+.search-pill:focus{outline:none;border-color:var(--yellow);background:var(--canvas)}
 
-/* ── Layout — 밴드 리듬 96px ── */
-.wrap{max-width:1440px;margin:0 auto;padding:0 var(--s-xl) var(--s-sec)}
-.wrap-narrow{max-width:900px}
-.hero{padding:var(--s-xxl) 0 var(--s-xl)}
-.hero h1{margin:0 0 var(--s-lg)}
-.hero .lede{color:var(--body);max-width:680px;margin:0;font-weight:300}
-.hero .stamp{color:var(--muted);margin-top:var(--s-md);
-  font-size:12px;letter-spacing:.5px;text-transform:uppercase}
+/* ── Layout ── */
+.wrap{max-width:1200px;margin:0 auto;padding:0 var(--s-lg) var(--s-xxl)}
+.wrap-narrow{max-width:820px}
+.hero{padding:var(--s-xl) 0 var(--s-lg)}
+.hero h1{margin:0 0 var(--s-md)}
+.hero .lede{max-width:660px;margin:0}
+.hero .stamp{color:var(--n-600);margin-top:var(--s-sm);font-size:13px;font-weight:700}
 
-/* Cards — 모서리 0, 그림자 없음 */
-.panel{background:var(--surface-soft);border:1px solid var(--hairline-strong);
-  border-radius:var(--r-none);padding:var(--s-lg);margin-bottom:var(--s-lg)}
-.card{display:block;background:var(--canvas);border:1px solid var(--hairline-strong);
-  border-radius:var(--r-none);padding:var(--s-lg);margin-bottom:var(--s-sm)}
-.card:active{border-color:var(--hairline)}
-.card-head{display:flex;gap:var(--s-md);align-items:flex-start}
-.card-title{flex:1;color:var(--on-dark);margin:0}
-.card-meta{color:var(--muted);margin-top:var(--s-xs);font-weight:300}
-.sec-head{margin:var(--s-sec) 0 var(--s-lg);padding-top:var(--s-lg);
-  border-top:1px solid var(--hairline-strong)}
-.sec-head:first-of-type{margin-top:var(--s-xl)}
-.sec-head .n{color:var(--muted);font-size:14px;font-weight:300;letter-spacing:1.5px;
-  margin-left:var(--s-sm);text-transform:uppercase}
+/* Cards */
+.panel{background:var(--canvas);border:1px solid var(--n-100);
+  border-radius:var(--r-lg);padding:var(--s-lg);margin-bottom:var(--s-md)}
+.card{display:block;background:var(--canvas);border:1px solid var(--n-100);
+  border-radius:var(--r-lg);padding:var(--s-lg);margin-bottom:var(--s-sm)}
+.card:active{border-color:var(--yellow)}
+.card-head{display:flex;gap:var(--s-sm);align-items:flex-start}
+.card-title{flex:1;margin:0}
+.card-meta{color:var(--n-600);margin-top:var(--s-xs);font-size:14px}
+.sec-head{margin:var(--s-xl) 0 var(--s-md)}
+.sec-head .n{color:var(--n-600);font-size:15px;font-weight:500;margin-left:var(--s-xs)}
 
-/* Badges — 트라이컬러를 채움으로 쓰지 않는다. 외곽선 + 대문자 라벨. */
-.badges{display:inline-flex;gap:var(--s-xs);margin-left:var(--s-sm);vertical-align:3px}
-.badge{border-radius:var(--r-none);padding:4px 10px;white-space:nowrap;
-  border:1px solid currentColor;background:transparent;
-  font-size:12px;font-weight:700;line-height:1.3;letter-spacing:1.5px;text-transform:uppercase}
-.badge-critical{color:var(--m-red)}
-.badge-attention{color:var(--warning)}
-.badge-neutral{color:var(--muted)}
-.badge-success{color:var(--success)}
-.badge-promo{color:var(--on-dark)}
+/* Badges */
+.badges{display:inline-flex;gap:var(--s-xxs);margin-left:var(--s-xs);vertical-align:3px}
+.badge{border-radius:var(--r-full);padding:3px 10px;white-space:nowrap;
+  font-size:12px;font-weight:700;line-height:1.5}
+.badge-critical{background:var(--safety-orange);color:#fff}
+.badge-attention{background:var(--yellow);color:var(--n-900)}
+.badge-neutral{background:var(--n-50);color:var(--n-600)}
+.badge-success{background:var(--navy);color:#fff}
+.badge-promo{background:var(--brown);color:#fff}
 
-/* Buttons — 채우지 않는다. 흰 외곽선 + 대문자 1.5px 자간. 48px 높이. */
-.acts{display:flex;gap:var(--s-sm);margin-top:var(--s-lg);flex-wrap:wrap}
-.btn{display:inline-flex;align-items:center;justify-content:center;
-  min-height:48px;padding:16px 32px;border-radius:var(--r-none);cursor:pointer;
-  white-space:nowrap;background:transparent;
-  font-size:14px;font-weight:700;line-height:1;letter-spacing:1.5px;text-transform:uppercase}
-.btn-primary{color:var(--on-dark);border:1px solid var(--on-dark)}
-.btn-primary:active{background:var(--on-dark);color:var(--canvas)}
-.btn-ghost{color:var(--body);border:1px solid var(--hairline)}
-.btn-ghost:active{border-color:var(--on-dark);color:var(--on-dark)}
-.btn-secondary-dark{color:var(--on-dark);border:1px solid var(--on-dark)}
-.btn-secondary-dark:active{background:var(--on-dark);color:var(--canvas)}
-/* button-icon — 시스템에서 유일하게 원형이 허용되는 자리 */
-.icon-btn{width:48px;height:48px;min-width:48px;border-radius:var(--r-full);
-  background:var(--surface-card);border:1px solid var(--hairline);
-  color:var(--on-dark);cursor:pointer;font-size:16px;line-height:1}
-.icon-btn:active{background:var(--surface-elevated)}
+/* Buttons */
+.acts{display:flex;gap:var(--s-xs);margin-top:var(--s-md);flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:48px;
+  padding:12px 26px;border-radius:var(--r-full);cursor:pointer;white-space:nowrap;
+  font-size:15px;font-weight:700;border:1px solid transparent}
+.btn-primary{background:var(--yellow);color:var(--n-900)}
+.btn-primary:active{background:#e5a212}
+.btn-ghost{background:var(--canvas);color:var(--brown);border-color:var(--n-300)}
+.btn-ghost:active{background:var(--n-50)}
+.btn-secondary-dark{background:var(--yellow);color:var(--n-900)}
+.btn-secondary-dark:active{background:#e5a212}
+.icon-btn{width:44px;height:44px;min-width:44px;border-radius:var(--r-full);
+  background:var(--n-50);border:0;color:var(--brown);cursor:pointer;font-size:16px}
+.icon-btn:active{background:var(--n-100)}
 
-/* spec-cell — 값(32/700) + 대문자 라벨 */
-.spec{display:flex;gap:var(--s-md);padding:var(--s-sm) 0;
-  border-bottom:1px solid var(--hairline-strong)}
+/* spec rows */
+.spec{display:flex;gap:var(--s-sm);padding:10px 0;border-bottom:1px solid var(--n-100)}
 .spec:last-of-type{border-bottom:0}
-.spec .k{flex:0 0 104px;color:var(--muted);
-  font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase}
-.spec .v{flex:1;color:var(--body-strong);font-size:16px;font-weight:300}
+.spec .k{flex:0 0 96px;color:var(--n-600);font-size:13px;font-weight:700}
+.spec .v{flex:1;color:var(--n-900);font-size:15px}
 
-.empty{background:var(--surface-soft);border:1px solid var(--hairline-strong);
-  border-radius:var(--r-none);padding:var(--s-xxl) var(--s-lg);
-  text-align:center;color:var(--muted)}
-.back{display:inline-block;color:var(--body);margin:var(--s-xl) 0 var(--s-md);
-  font-size:14px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase}
-.back:active{color:var(--on-dark)}
+.empty{background:var(--n-50);border-radius:var(--r-lg);
+  padding:var(--s-xl) var(--s-lg);text-align:center;color:var(--n-600)}
+.back{display:inline-block;color:var(--n-600);margin:var(--s-lg) 0 var(--s-sm);
+  font-size:14px;font-weight:700}
+.back:active{color:var(--brown)}
 
-/* cta-band — 사진이 없으므로 M 스트라이프 + 큰 디스플레이 타입으로 무게를 만든다 */
-.promo-strip{background:var(--canvas);border-top:1px solid var(--hairline-strong);
-  border-bottom:1px solid var(--hairline-strong);
-  border-radius:var(--r-none);padding:80px var(--s-lg);margin-top:var(--s-sec);
-  text-align:center}
-.promo-strip .rule{height:4px;width:96px;margin:0 auto var(--s-lg);
-  background:linear-gradient(90deg,var(--m-blue-light) 0 33.33%,
-    var(--m-blue-dark) 33.33% 66.66%,var(--m-red) 66.66% 100%)}
-.promo-strip h2{margin:0 0 var(--s-md)}
-.promo-strip p{color:var(--body);margin:0 0 var(--s-xl);font-weight:300}
+/* CTA band — 그라운드 브라운 */
+.promo-strip{background:var(--brown);color:#fff;border-radius:var(--r-xl);
+  padding:var(--s-xl) var(--s-lg);margin-top:var(--s-xl);text-align:center}
+.promo-strip .rule{margin-left:auto;margin-right:auto}
+.promo-strip h2{margin:0 0 var(--s-xs);color:#fff}
+.promo-strip p{color:rgba(255,255,255,.75);margin:0 0 var(--s-lg)}
 
-/* footer — 4단, 항상 검정 */
-.footer{border-top:1px solid var(--hairline-strong);margin-top:var(--s-sec);
-  padding:var(--s-xxl) 0}
-.footer-cols{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--s-xl)}
-.footer h3{color:var(--on-dark);margin:0 0 var(--s-md);
-  font-size:14px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase}
+/* footer */
+.footer{border-top:1px solid var(--n-100);margin-top:var(--s-xl);padding:var(--s-xl) 0 var(--s-lg)}
+.footer-cols{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--s-lg)}
+.footer h3{color:var(--n-900);margin:0 0 var(--s-sm);font-size:14px;font-weight:700}
 .footer ul{margin:0;padding:0}
-.footer li{list-style:none;color:var(--body);margin-bottom:var(--s-xs);
-  font-size:14px;font-weight:300;line-height:1.5}
-.footer .legal{color:var(--muted);border-top:1px solid var(--hairline-strong);
-  margin-top:var(--s-xl);padding-top:var(--s-lg);
-  font-size:12px;font-weight:400;line-height:1.7;letter-spacing:.5px}
+.footer li{list-style:none;color:var(--n-600);margin-bottom:6px;font-size:14px}
+.footer .legal{color:var(--n-600);border-top:1px solid var(--n-100);
+  margin-top:var(--s-lg);padding-top:var(--s-md);font-size:12px;line-height:1.8}
 
 /* ── Responsive ── */
 @media (max-width:1024px){
   .footer-cols{grid-template-columns:repeat(2,1fr)}
-  .t-hero{font-size:56px}
+  .t-hero{font-size:40px}
 }
 @media (max-width:767px){
-  .nav-inner{padding:var(--s-sm) var(--s-md);gap:var(--s-md);flex-wrap:wrap}
+  .nav-inner{padding:var(--s-sm) var(--s-md);gap:var(--s-sm);flex-wrap:wrap;min-height:60px}
   .hamburger{display:block;order:3;margin-left:auto}
-  .nav-tabs{display:none;order:4;flex-basis:100%;gap:var(--s-md);
-    flex-direction:column;padding-bottom:var(--s-md);
-    border-top:1px solid var(--hairline-strong);margin-top:var(--s-sm)}
+  .nav-tabs{display:none;order:4;flex-basis:100%;padding-bottom:var(--s-sm)}
   .nav-tabs.open{display:flex}
-  .pill-tab{border-bottom:0;border-left:2px solid transparent;padding:12px 0 12px 12px}
-  .pill-tab.on{border-bottom-color:transparent;border-left-color:var(--on-dark)}
   .nav-right{order:2}
-  .search-pill{width:150px}
-  .wrap{padding:0 var(--s-md) var(--s-xxl)}
-  .hero{padding:var(--s-xl) 0 var(--s-lg)}
-  .t-hero{font-size:48px}
-  .t-display{font-size:36px}
-  .t-h-lg{font-size:28px}
-  .t-h-md{font-size:24px}
-  .sec-head{margin:var(--s-xxl) 0 var(--s-md)}
-  .footer-cols{grid-template-columns:1fr;gap:var(--s-lg)}
-  .promo-strip{padding:var(--s-xl) var(--s-md)}
+  .search-pill{width:150px;height:40px}
+  .wrap{padding:0 var(--s-md) var(--s-xl)}
+  .hero{padding:var(--s-lg) 0 var(--s-md)}
+  .t-hero{font-size:30px;letter-spacing:-.6px}
+  .t-display{font-size:26px}
+  .t-h-lg{font-size:22px}
+  .panel,.card{padding:var(--s-md)}
+  .sec-head{margin:var(--s-lg) 0 var(--s-sm)}
+  .footer-cols{grid-template-columns:1fr;gap:var(--s-md)}
+  .promo-strip{padding:var(--s-lg) var(--s-md)}
   .acts .btn{flex:1}
 }
-@media (max-width:479px){
-  .t-hero{font-size:36px}
-}
 
-.num{display:inline-block;min-width:38px;color:var(--muted);
-  font-size:14px;font-weight:700;letter-spacing:1.5px}
-.srcgrp{display:flex;align-items:baseline;gap:var(--s-sm);
-  color:var(--on-dark);margin:var(--s-xl) 0 var(--s-sm);
-  padding-bottom:var(--s-xs);border-bottom:1px solid var(--hairline-strong);
-  font-size:14px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase}
-.srcgrp .n{color:var(--muted);font-weight:300;letter-spacing:.5px}
-details.more{margin:0 0 var(--s-md)}
-details.more>summary{cursor:pointer;list-style:none;color:var(--on-dark);
-  background:transparent;border:1px solid var(--hairline);border-radius:var(--r-none);
-  padding:16px 32px;display:inline-block;min-height:48px;
-  font-size:14px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase}
+.num{display:inline-block;min-width:34px;color:var(--yellow);font-size:15px;font-weight:800}
+.srcgrp{display:flex;align-items:baseline;gap:var(--s-xs);
+  color:var(--brown);margin:var(--s-lg) 0 var(--s-sm);
+  font-size:14px;font-weight:800}
+.srcgrp .n{color:var(--n-600);font-weight:500}
+details.more{margin:0 0 var(--s-sm)}
+details.more>summary{cursor:pointer;list-style:none;color:var(--brown);
+  background:var(--n-50);border-radius:var(--r-full);
+  padding:12px 24px;display:inline-block;font-size:14px;font-weight:700}
 details.more>summary::-webkit-details-marker{display:none}
-details.more[open]>summary{margin-bottom:var(--s-md)}
-.warn{background:var(--surface-soft);border:1px solid var(--warning);
-  border-radius:var(--r-none);padding:var(--s-md) var(--s-lg);
-  color:var(--body-strong);margin:var(--s-md) 0;
-  font-size:14px;font-weight:300;line-height:1.6}
-.summary{background:var(--surface-soft);border:1px solid var(--hairline-strong);
-  border-radius:var(--r-none);padding:var(--s-lg);margin:var(--s-md) 0}
-.summary .lbl{color:var(--muted);margin-bottom:var(--s-sm);
-  font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase}
-.detail-title{margin:0 0 var(--s-md)}
-.detail-meta{color:var(--muted);margin:0 0 var(--s-xl);font-weight:300}
-.dash-link{display:block;background:var(--surface-card);
-  border:1px solid var(--hairline-strong);border-radius:var(--r-none);
-  padding:var(--s-lg);margin-bottom:var(--s-lg);color:var(--on-dark)}
-.dash-link:active{border-color:var(--on-dark)}
-.dash-link .sub{color:var(--body);margin-top:var(--s-xs);font-weight:300}
+details.more[open]>summary{margin-bottom:var(--s-sm)}
+.warn{background:#FFF8E6;border:1px solid var(--yellow);border-radius:var(--r-md);
+  padding:var(--s-sm) var(--s-md);color:var(--n-900);margin:var(--s-sm) 0;font-size:14px}
+.summary{background:var(--n-50);border-radius:var(--r-lg);
+  padding:var(--s-lg);margin:var(--s-md) 0}
+.summary .lbl{color:var(--n-600);margin-bottom:6px;font-size:13px;font-weight:700}
+.detail-title{margin:0 0 var(--s-sm)}
+.detail-meta{color:var(--n-600);margin:0 0 var(--s-lg);font-size:14px}
+.dash-link{display:block;background:var(--blue-3);border-radius:var(--r-lg);
+  padding:var(--s-md) var(--s-lg);margin-bottom:var(--s-md);color:var(--navy)}
+.dash-link:active{background:var(--blue-2)}
+.dash-link .sub{color:#2b5580;margin-top:2px;font-size:14px}
 </style>
 </head>
 <body>
-<hr class="m-stripe">
 <div class="promo-banner">
   <span class="clip">AI 기업교육 모두의러닝 · 고용노동부 지정 원격훈련기관 ·
     <a href="https://modulearning.kr" target="_blank" rel="noopener">알아보기</a></span>
 </div><nav class="topnav">
   <div class="nav-inner">
-    <a class="wordmark" href="../index.html"><span class="bar"></span>모두의러닝</a>
+    <a class="wordmark" href="../index.html"><svg class="mark" viewBox="0 0 40 41" width="26" height="27" aria-hidden="true"><rect x="0" y="0" width="17" height="17" rx="3.5" fill="#FDB515"/><path d="M21 0 H36.5 A3.5 3.5 0 0 1 40 3.5 V13.5 A3.5 3.5 0 0 1 36.5 17 H21 V11.5 H33 V5.5 H21 Z" fill="#FDB515"/><circle cx="8.5" cy="32.5" r="8.5" fill="#FDB515"/><path d="M24 23 L39 32.5 L24 42 Z" fill="#545046"/></svg>모두의러닝</a>
     <div class="nav-tabs" id="navTabs"><a class="pill-tab" href="../index.html">전체</a><a class="pill-tab on" href="../gov.html">📢 지원사업</a></div>
     <div class="nav-right"></div>
     <button class="hamburger" id="burger" aria-label="메뉴" aria-expanded="false">☰</button>
@@ -283,7 +234,7 @@ details.more[open]>summary{margin-bottom:var(--s-md)}
 <div class="spec"><div class="k">신청기간</div><div class="v">8/4 ~ 8/24 (D-20)</div></div>
 <div class="spec"><div class="k">지원대상</div><div class="v">주관기관 희망 기관</div></div>
 <div class="spec"><div class="k">출처</div><div class="v">K-Startup</div></div></div><div class="summary"><div class="lbl">사업 개요</div><div class="t-body">글로벌 창업 프로그램을 운영할 주관기관을 모집합니다. 접수 마감 8월 24일 16시.</div></div><div class="acts"><a class="btn btn-primary" href="https://www.k-startup.go.kr/web/contents/bizpbanc-ongoing.do?schM=view&amp;pbancSn=178779" target="_blank" rel="noopener">공고 원문 보기</a><a class="btn btn-ghost" href="../gov.html">전체 목록</a></div><section class="promo-strip">
-  <div class="rule"></div>
+  <hr class="rule">
   <h2 class="t-h-lg">AI 기업교육 모두의러닝</h2>
   <p class="t-sub-md">고용노동부 지정 원격훈련기관 · 기업 맞춤 이러닝</p>
   <a class="btn btn-primary" href="https://modulearning.kr"

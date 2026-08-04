@@ -25,74 +25,57 @@ import shutil
 from . import theme
 
 EXTRA_CSS = r"""
-/* spec-cell — 값(32/700) + 대문자 라벨. 4-up */
-.stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;
-  background:var(--hairline-strong);border:1px solid var(--hairline-strong);
-  margin-bottom:var(--s-xl)}
-.stat{background:var(--surface-soft);border-radius:var(--r-none);padding:var(--s-lg)}
-.stat .v{font-size:32px;font-weight:700;line-height:1.15;letter-spacing:-.5px;
-  color:var(--on-dark)}
-.stat .k{color:var(--muted);margin-top:var(--s-xs);
-  font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase}
-.stat.is-hot .v{color:var(--m-red)}
+/* 통계 타일 4-up */
+.stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--s-sm);
+  margin-bottom:var(--s-lg)}
+.stat{background:var(--n-50);border-radius:var(--r-lg);padding:var(--s-md) var(--s-lg)}
+.stat .v{font-size:32px;font-weight:800;line-height:1.2;letter-spacing:-.6px;color:var(--navy)}
+.stat .k{color:var(--n-600);margin-top:2px;font-size:13px;font-weight:700}
+.stat.is-hot{background:#FFF3E8}
+.stat.is-hot .v{color:var(--safety-orange)}
 
-.panel h2{margin:0 0 var(--s-md)}
-.chips{display:flex;gap:var(--s-lg);flex-wrap:wrap}
-.filterbar{display:flex;align-items:center;gap:var(--s-md);
-  margin:0 0 var(--s-md);padding-bottom:var(--s-sm);
-  border-bottom:1px solid var(--hairline-strong)}
-.filterbar .count{color:var(--muted);
-  font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase}
+.panel h2{margin:0 0 var(--s-xs)}
+.chips{display:flex;gap:var(--s-xs);flex-wrap:wrap}
+.filterbar{display:flex;align-items:center;gap:var(--s-sm);margin:var(--s-lg) 0 var(--s-sm)}
+.filterbar .count{color:var(--n-600);font-size:14px;font-weight:700}
 .filterbar .sp{flex:1}
-.sortsel{background:var(--surface-card);color:var(--on-dark);
-  border:1px solid var(--hairline);border-radius:var(--r-none);
-  height:48px;padding:0 var(--s-md);
-  font-size:14px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase}
-.sortsel:focus{outline:none;border-color:var(--on-dark)}
+.sortsel{background:var(--canvas);color:var(--n-900);border:1px solid var(--n-300);
+  border-radius:var(--r-full);height:44px;padding:0 var(--s-md);font-size:14px;font-weight:700}
+.sortsel:focus{outline:none;border-color:var(--yellow)}
 
 /* 마감 달력 */
-.calhead{display:flex;align-items:center;gap:var(--s-md);margin-bottom:var(--s-md)}
-.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;
-  background:var(--hairline-strong);border:1px solid var(--hairline-strong)}
-.cal .dow{text-align:center;background:var(--canvas);color:var(--muted);
-  padding:var(--s-xs) 0;font-size:12px;font-weight:700;letter-spacing:.5px}
-.cal .day{aspect-ratio:1;border-radius:var(--r-none);background:var(--surface-soft);
-  color:var(--muted);display:flex;flex-direction:column;align-items:center;
-  justify-content:center;gap:2px;font-size:14px;font-weight:300}
-.cal .day.blank{background:var(--canvas)}
-.cal .day.has{background:var(--surface-elevated);color:var(--on-dark);
-  font-weight:700;cursor:pointer}
-.cal .day.has .n{font-size:11px;font-weight:700;letter-spacing:.5px;color:var(--m-red)}
-.cal .day.sel{background:var(--on-dark);color:var(--canvas)}
-.cal .day.sel .n{color:var(--canvas)}
+.calhead{display:flex;align-items:center;gap:var(--s-sm);margin-bottom:var(--s-sm)}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.cal .dow{text-align:center;color:var(--n-600);padding:4px 0;font-size:12px;font-weight:700}
+.cal .day{aspect-ratio:1;border-radius:var(--r-md);background:var(--n-50);
+  color:var(--n-600);display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:1px;font-size:14px}
+.cal .day.blank{background:transparent}
+.cal .day.has{background:var(--yellow);color:var(--n-900);font-weight:800;cursor:pointer}
+.cal .day.has .n{font-size:11px;font-weight:700}
+.cal .day.sel{background:var(--brown);color:#fff}
 
-/* button-icon — 원형이 허용되는 유일한 자리 */
-.starbtn{width:48px;height:48px;min-width:48px;border-radius:var(--r-full);
-  border:1px solid var(--hairline);background:var(--surface-card);
-  color:var(--muted);font-size:18px;line-height:1;cursor:pointer}
-.starbtn.on{color:var(--on-dark);border-color:var(--on-dark)}
-.starbtn:active{background:var(--surface-elevated)}
+.starbtn{width:44px;height:44px;min-width:44px;border-radius:var(--r-full);border:0;
+  background:var(--n-50);color:var(--n-300);font-size:18px;line-height:1;cursor:pointer}
+.starbtn.on{background:#FFF3D1;color:var(--yellow)}
+.starbtn:active{background:var(--n-100)}
 
-.det{margin-top:var(--s-md);border-top:1px solid var(--hairline-strong);
-  padding-top:var(--s-md)}
-.det .lede{color:var(--body);margin:0 0 var(--s-md);font-weight:300}
-.memo{width:100%;margin-top:var(--s-md);min-height:80px;resize:vertical;
-  background:var(--surface-card);color:var(--on-dark);
-  border:1px solid var(--hairline);border-radius:var(--r-none);
-  padding:12px 16px;font-size:16px;font-weight:300;line-height:1.5}
-.memo:focus{outline:none;border-color:var(--on-dark)}
-.saved{color:var(--success);margin-top:var(--s-xs);
-  font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase}
+.det{margin-top:var(--s-md);border-top:1px solid var(--n-100);padding-top:var(--s-md)}
+.det .lede{color:var(--n-600);margin:0 0 var(--s-sm);font-size:15px}
+.memo{width:100%;margin-top:var(--s-sm);min-height:80px;resize:vertical;
+  background:var(--n-50);color:var(--n-900);border:1px solid transparent;
+  border-radius:var(--r-md);padding:12px 14px;font-size:15px;line-height:1.6}
+.memo:focus{outline:none;border-color:var(--yellow);background:var(--canvas)}
+.saved{color:var(--success);margin-top:6px;font-size:12px;font-weight:700}
 
 @media (max-width:1024px){ .stat-row{grid-template-columns:repeat(2,1fr)} }
-@media (max-width:767px){ .chips{gap:var(--s-md)} }
 """
 
 BODY = r"""__PROMO_BANNER__
 
 <nav class="topnav">
   <div class="nav-inner">
-    <a class="wordmark" href="./">모두의러닝</a>
+    <a class="wordmark" href="./">__LOGO__모두의러닝</a>
     <div class="nav-tabs" id="navTabs">
       <button class="pill-tab on" data-f="all">전체</button>
       <button class="pill-tab" data-f="soon">마감 임박</button>
@@ -108,7 +91,8 @@ BODY = r"""__PROMO_BANNER__
 
 <div class="wrap">
   <header class="hero">
-    <h1 class="t-hero">정부지원사업<br>모아보기</h1>
+    <h1 class="t-hero">정부지원사업 모아보기</h1>
+    <hr class="rule">
     <p class="lede t-sub-md">지금 신청할 수 있는 공고를 마감 임박 순으로 모았습니다.
       매주 월요일 아침에 갱신되고, 마감된 공고는 자동으로 빠집니다.</p>
     <p class="stamp" id="updated">불러오는 중…</p>
@@ -371,6 +355,7 @@ def publish_dashboard(docs_dir: str, base_url: str, thumb_src: str = None) -> st
         shutil.copyfile(thumb_src, os.path.join(out_dir, "thumb.png"))
 
     body = (BODY.replace("__PROMO_BANNER__", theme.PROMO_BANNER)
+                .replace("__LOGO__", theme.LOGO_SVG)
                 .replace("__PROMO_STRIP__", theme.PROMO_STRIP)
                 .replace("__FOOTER__", theme.footer(LEGAL_EXTRA)))
 

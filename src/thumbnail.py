@@ -1,8 +1,14 @@
-"""카카오톡 링크 미리보기용 모두의러닝 썸네일 (1080x1080) 생성.
+"""카카오톡 링크 미리보기용 썸네일 (1080x1080) 생성 — 모두의교육그룹 BI.
 
-카테고리 구성에 따라 제목·통계 카드·배경색이 달라진다.
-  뉴스 포함        → 네이비 그라데이션 + "WEEKLY NEWS" 배지
-  공고 단독        → 브랜드 코랄 그라데이션 + "정부지원사업" 배지
+브랜딩북 기준 (모두의러닝 Brand main colors)
+  #FDB515 선라이트 옐로우 · #545046 그라운드 브라운 · #003362 인사이트 네이비
+  Neutral #F5F5F5 #EAE8E8 #C2C2C2 #7A7A7A #111111
+
+지면은 브랜딩북과 같이 **흰 바탕**을 쓰고, 옐로우는 마크·룰·강조에만 얹는다.
+카카오톡 대화 목록에서 흰 카드가 오히려 눈에 띈다.
+
+로고 마크는 브랜딩북 Logo Construction 페이지의 2×2 구성을 그대로 재현한다
+  좌상 라운드 사각(옐로우) · 우상 ㄷ자(옐로우) · 좌하 원(옐로우) · 우하 재생 삼각형(브라운)
 """
 from datetime import date
 
@@ -14,20 +20,17 @@ from .message import fmt_date_ko
 
 W = H = 1080
 
-NAVY = (22, 41, 92)           # #16295C
-BLUE = (36, 87, 197)          # #2457C5
-PILL_BLUE = (61, 116, 224)    # #3D74E0
-LIGHT_BLUE = (157, 184, 232)  # #9DB8E8
-PALE_BLUE = (201, 217, 245)   # #C9D9F5
-
-CORAL_DARK = (176, 45, 42)    # 코랄 그라데이션 시작
-CORAL = (249, 82, 78)         # #F9524E 모두의러닝 브랜드 코랄
-PILL_CORAL = (255, 122, 116)
-LIGHT_CORAL = (255, 198, 194)
-PALE_CORAL = (255, 224, 221)
-
-YELLOW = (255, 201, 60)       # #FFC93C
+YELLOW = (253, 181, 21)    # #FDB515 선라이트 옐로우
+BROWN = (84, 80, 70)       # #545046 그라운드 브라운
+NAVY = (0, 51, 98)         # #003362 인사이트 네이비
+ORANGE = (255, 95, 27)     # #FF5F1B 세이프티 오렌지 (그룹 패밀리)
+N_50 = (245, 245, 245)
+N_100 = (234, 232, 232)
+N_600 = (122, 122, 122)
+N_900 = (17, 17, 17)
 WHITE = (255, 255, 255)
+
+MARGIN = 96
 
 
 def _draw_centered(d: ImageDraw.ImageDraw, text: str, y: int, f, fill, x_center: int = W // 2):
@@ -55,164 +58,110 @@ def _wrap(d: ImageDraw.ImageDraw, text: str, f, max_w: int) -> list:
     return lines
 
 
-LINE_SPACING = 1.26
-# 제목이 들어갈 세로 구간 (위: 배지 아래, 아래: 날짜 위)
-TITLE_TOP, TITLE_BOTTOM = 400, 712
-
-
-def _fit_title(d: ImageDraw.ImageDraw, text: str, max_w: int, max_h: int, max_lines: int = 3):
-    """가로·세로 상자 안에 들어오는 가장 큰 글자 크기로 (폰트, 줄목록)을 찾는다.
-
-    카테고리 조합에 따라 제목 길이가 1~3줄로 달라지므로, 줄 수만 보고
-    자르면 배지·날짜와 겹친다. 높이까지 함께 확인해야 한다.
-    """
-    for size in range(108, 51, -4):
-        f = font("black", size)
+def _fit(d: ImageDraw.ImageDraw, text: str, max_w: int, max_h: int,
+         start: int = 104, floor: int = 52, max_lines: int = 3, weight: str = "black"):
+    for size in range(start, floor - 1, -4):
+        f = font(weight, size)
         lines = _wrap(d, text, f, max_w)
         if len(lines) > max_lines:
             continue
         if any(_text_w(d, ln, f) > max_w for ln in lines):
             continue
-        if int(size * LINE_SPACING) * len(lines) > max_h:
+        if int(size * 1.3) * len(lines) > max_h:
             continue
         return f, lines
-    f = font("black", 52)
+    f = font(weight, floor)
     return f, _wrap(d, text, f, max_w)[:max_lines]
 
 
-def _gradient(top: tuple, bottom: tuple) -> Image.Image:
-    img = Image.new("RGB", (W, H))
-    px = img.load()
-    for y in range(H):
-        t = y / H
-        row = tuple(int(top[i] + (bottom[i] - top[i]) * t) for i in range(3))
-        for x in range(W):
-            px[x, y] = row
-    return img
+def draw_logo(d: ImageDraw.ImageDraw, x: int, y: int, size: int) -> int:
+    """브랜딩북 2×2 로고 마크. 반환값은 마크의 가로 폭."""
+    u = size / 41.0          # 원본 좌표계 40×41 기준
+    gap = 4 * u
+
+    # 좌상 — 라운드 사각
+    d.rounded_rectangle((x, y, x + 17 * u, y + 17 * u), radius=3.5 * u, fill=YELLOW)
+    # 우상 — ㄷ자 (왼쪽이 열린 형태)
+    x2 = x + 21 * u
+    d.rounded_rectangle((x2, y, x + 40 * u, y + 17 * u), radius=3.5 * u, fill=YELLOW)
+    d.rectangle((x2 - 1, y + 5.5 * u, x2 + 12 * u, y + 11.5 * u), fill=WHITE)
+    # 좌하 — 원
+    cy = y + 24 * u
+    d.ellipse((x, cy, x + 17 * u, cy + 17 * u), fill=YELLOW)
+    # 우하 — 재생 삼각형
+    d.polygon([(x + 24 * u, y + 23 * u), (x + 39 * u, y + 32.5 * u), (x + 24 * u, y + 42 * u)],
+              fill=BROWN)
+    return int(40 * u + gap)
+
+
+def _shell(d: ImageDraw.ImageDraw, img: Image.Image) -> None:
+    """공통 지면: 상단 로고 + 하단 옐로우 바 + 푸터 문구."""
+    lw = draw_logo(d, MARGIN, MARGIN, 88)
+    wf = font("black", 62)
+    bb = d.textbbox((0, 0), "모두의러닝", font=wf)
+    d.text((MARGIN + lw + 18 - bb[0], MARGIN + 14 - bb[1]), "모두의러닝", font=wf, fill=BROWN)
+
+    d.rectangle((0, H - 92, W, H - 84), fill=YELLOW)
+    _draw_centered(d, "AI 기업교육 · 법정의무교육은 모두의러닝", H - 60,
+                   font("bold", 34), N_600)
 
 
 def render_dashboard_thumbnail(out_path: str) -> None:
-    """공개 대시보드(/gov/)용 썸네일.
-
-    ⚠️ 대시보드는 주소가 고정이라 카카오가 미리보기를 캐시한다.
-       그래서 건수·날짜를 **넣지 않는다** — 넣으면 몇 주 뒤 카드에 옛날 숫자가 남는다.
-    """
-    img = _gradient(CORAL_DARK, CORAL)
-
-    overlay = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    od = ImageDraw.Draw(overlay)
-    od.ellipse((W - 420, H - 420, W + 260, H + 260), fill=(255, 255, 255, 16))
-    od.ellipse((W - 300, H - 300, W + 140, H + 140), fill=(255, 255, 255, 12))
-    img = Image.alpha_composite(img.convert("RGBA"), overlay).convert("RGB")
+    """공개 대시보드(/gov/)용. 주소가 고정이라 카카오가 캐시하므로 건수·날짜를 넣지 않는다."""
+    img = Image.new("RGB", (W, H), WHITE)
     d = ImageDraw.Draw(img)
+    _shell(d, img)
 
-    brand_f, sub_f = font("black", 64), font("regular", 34)
-    bw, sw = _text_w(d, "모두의러닝", brand_f), _text_w(d, "modulearning.kr", sub_f)
-    bb = d.textbbox((0, 0), "모두의러닝", font=brand_f)
-    sb = d.textbbox((0, 0), "modulearning.kr", font=sub_f)
-    x0 = (W - (bw + 30 + 4 + 30 + sw)) // 2
-    d.text((x0 - bb[0], 130 - bb[1]), "모두의러닝", font=brand_f, fill=WHITE)
-    div_x = x0 + bw + 30
-    d.rectangle((div_x, 140, div_x + 4, 200), fill=LIGHT_CORAL)
-    d.text((div_x + 34 - sb[0], 158 - sb[1]), "modulearning.kr", font=sub_f, fill=LIGHT_CORAL)
+    # 라벨 + 짧은 옐로우 룰 (브랜딩북의 시그니처 장치)
+    lf = font("bold", 36)
+    d.text((MARGIN, 330), "언제든 확인하세요", font=lf, fill=N_600)
+    d.rectangle((MARGIN, 392, MARGIN + 56, 398), fill=YELLOW)
 
-    pill_f = font("bold", 30)
-    pill_text = "언 제 든   확 인 하 세 요"
-    pw = _text_w(d, pill_text, pill_f)
-    pill_x0 = (W - pw - 80) // 2
-    d.rounded_rectangle((pill_x0, 360, pill_x0 + pw + 80, 434), radius=37, fill=PILL_CORAL)
-    _draw_centered(d, pill_text, 380, pill_f, WHITE)
+    tf, lines = _fit(d, "정부지원사업 모아보기", W - MARGIN * 2, 300, start=112, max_lines=2)
+    y = 448
+    for ln in lines:
+        bb = d.textbbox((0, 0), ln, font=tf)
+        d.text((MARGIN - bb[0], y - bb[1]), ln, font=tf, fill=N_900)
+        y += int(tf.size * 1.3)
 
-    title_f = font("black", 104)
-    _draw_centered(d, "정부지원사업", 510, title_f, WHITE)
-    _draw_centered(d, "모아보기", 645, title_f, WHITE)
-
-    _draw_centered(d, "지금 신청할 수 있는 공고를 마감 임박 순으로",
-                   810, font("regular", 40), PALE_CORAL)
-
-    d.rectangle((0, 980, W, 986), fill=YELLOW)
-    _draw_centered(d, "법정의무교육·산업안전보건교육은 모두의러닝", 1010, font("bold", 36), WHITE)
+    sf = font("regular", 40)
+    d.text((MARGIN, y + 24), "지금 신청할 수 있는 공고를", font=sf, fill=N_600)
+    d.text((MARGIN, y + 24 + 56), "마감 임박 순으로", font=sf, fill=N_600)
 
     img.save(out_path, "PNG")
 
 
 def render_thumbnail(out_path: str, issue_date: date, counts: dict) -> None:
-    """counts: {카테고리: 건수}. 이번 주에 실제로 발행하는 카테고리만 담는다."""
+    """주차 발행용. counts: {카테고리: 건수}"""
     cats = sort_cats(counts.keys())
     if not cats:
         raise ValueError("counts가 비어 있습니다 — 발행할 카테고리가 없습니다.")
-    gov_only = all(is_gov(c) for c in cats)
 
-    if gov_only:
-        top, bottom = CORAL_DARK, CORAL
-        pill_fill, accent, pale = PILL_CORAL, LIGHT_CORAL, PALE_CORAL
-        pill_text = "정 부 지 원 사 업   공 고"
-    else:
-        top, bottom = NAVY, BLUE
-        pill_fill, accent, pale = PILL_BLUE, LIGHT_BLUE, PALE_BLUE
-        pill_text = "W E E K L Y   N E W S" if not any(is_gov(c) for c in cats) else "W E E K L Y"
-
-    img = _gradient(top, bottom)
-
-    # 우하단 반투명 원형 모티프
-    overlay = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    od = ImageDraw.Draw(overlay)
-    od.ellipse((W - 420, H - 420, W + 260, H + 260), fill=(255, 255, 255, 16))
-    od.ellipse((W - 300, H - 300, W + 140, H + 140), fill=(255, 255, 255, 12))
-    img = Image.alpha_composite(img.convert("RGBA"), overlay).convert("RGB")
+    img = Image.new("RGB", (W, H), WHITE)
     d = ImageDraw.Draw(img)
+    _shell(d, img)
 
-    # 상단 브랜드
-    brand_f = font("black", 64)
-    sub_f = font("regular", 34)
-    bw, sw = _text_w(d, "모두의러닝", brand_f), _text_w(d, "modulearning.kr", sub_f)
-    bb = d.textbbox((0, 0), "모두의러닝", font=brand_f)
-    sb = d.textbbox((0, 0), "modulearning.kr", font=sub_f)
-    x0 = (W - (bw + 30 + 4 + 30 + sw)) // 2
-    d.text((x0 - bb[0], 90 - bb[1]), "모두의러닝", font=brand_f, fill=WHITE)
-    div_x = x0 + bw + 30
-    d.rectangle((div_x, 100, div_x + 4, 160), fill=accent)
-    d.text((div_x + 34 - sb[0], 118 - sb[1]), "modulearning.kr", font=sub_f, fill=accent)
+    lf = font("bold", 36)
+    d.text((MARGIN, 320), fmt_date_ko(issue_date), font=lf, fill=N_600)
+    d.rectangle((MARGIN, 382, MARGIN + 56, 388), fill=YELLOW)
 
-    # 배지
-    pill_f = font("bold", 30)
-    pw = _text_w(d, pill_text, pill_f)
-    pill_x0 = (W - pw - 80) // 2
-    d.rounded_rectangle((pill_x0, 300, pill_x0 + pw + 80, 300 + 74), radius=37, fill=pill_fill)
-    _draw_centered(d, pill_text, 320, pill_f, WHITE)
+    tf, lines = _fit(d, page_title(cats), W - MARGIN * 2, 300, start=104, max_lines=3)
+    y = 438
+    for ln in lines:
+        bb = d.textbbox((0, 0), ln, font=tf)
+        d.text((MARGIN - bb[0], y - bb[1]), ln, font=tf, fill=N_900)
+        y += int(tf.size * 1.3)
 
-    # 메인 타이틀 — 카테고리 구성에 따라 길이가 달라지므로 자동 맞춤
-    avail_h = TITLE_BOTTOM - TITLE_TOP
-    title_f, title_lines = _fit_title(d, page_title(cats), max_w=W - 120,
-                                      max_h=avail_h, max_lines=3)
-    line_h = int(title_f.size * LINE_SPACING)
-    block_h = line_h * len(title_lines)
-    y = TITLE_TOP + (avail_h - block_h) // 2
-    for ln in title_lines:
-        _draw_centered(d, ln, y, title_f, WHITE)
-        y += line_h
-
-    # 날짜
-    _draw_centered(d, fmt_date_ko(issue_date), 725, font("regular", 44), pale)
-
-    # 통계 카드 (2~3개)
-    n = len(cats)
-    card_w, gap = (400, 40) if n <= 2 else (320, 30)
-    card_h = 96
-    card_f = font("bold", 40 if n <= 2 else 34)
-    cx0 = (W - card_w * n - gap * (n - 1)) // 2
-    for i, cat in enumerate(cats):
-        x = cx0 + i * (card_w + gap)
-        overlay = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-        od = ImageDraw.Draw(overlay)
-        od.rounded_rectangle((x, 810, x + card_w, 810 + card_h), radius=24, fill=(255, 255, 255, 26))
-        img = Image.alpha_composite(img.convert("RGBA"), overlay).convert("RGB")
-        d = ImageDraw.Draw(img)
-        _draw_centered(d, f"{CATEGORIES[cat]['stat_label']} {counts[cat]}건",
-                       810 + 30, card_f, WHITE, x + card_w // 2)
-
-    # 푸터
-    d.rectangle((0, 980, W, 986), fill=YELLOW)
-    _draw_centered(d, "법정의무교육·산업안전보건교육은 모두의러닝", 1010, font("bold", 36), WHITE)
+    # 카테고리별 건수 — 옐로우 점 + 라벨
+    y = max(y + 40, 760)
+    nf, cf = font("bold", 38), font("black", 44)
+    for cat in cats:
+        color = ORANGE if is_gov(cat) else NAVY
+        d.ellipse((MARGIN, y + 12, MARGIN + 20, y + 32), fill=color)
+        label = CATEGORIES[cat]["stat_label"]
+        d.text((MARGIN + 40, y), label, font=nf, fill=N_600)
+        num = f"{counts[cat]}건"
+        d.text((MARGIN + 40 + _text_w(d, label, nf) + 20, y - 4), num, font=cf, fill=N_900)
+        y += 62
 
     img.save(out_path, "PNG")
