@@ -1,4 +1,4 @@
-name: weekly-news
+name: weekly-publish
 
 on:
   schedule:
@@ -11,7 +11,7 @@ on:
         default: false
 
 concurrency:
-  group: weekly-news
+  group: weekly-publish
   cancel-in-progress: false
 
 permissions:
@@ -39,12 +39,16 @@ jobs:
         env:
           NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID }}
           NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
+          BIZINFO_KEY: ${{ secrets.BIZINFO_KEY }}
+          DATA_GO_KR_KEY: ${{ secrets.DATA_GO_KR_KEY }}
           PAGES_BASE_URL: https://jwchoi061217-web.github.io/-
 
+      # docs/ 에는 발행물과 함께 docs/state/seen_gov.json(이미 내보낸 공고 기록)이 들어간다.
+      # 이 파일이 커밋되어야 다음 주에 같은 공고가 또 올라가지 않는다.
       - name: Commit outputs
         run: |
           git config user.name "modu-news-bot"
           git config user.email "actions@users.noreply.github.com"
           git add docs/
-          git diff --cached --quiet || git commit -m "news: $(date -u -d '+9 hours' +%F) 주간 뉴스 발행"
+          git diff --cached --quiet || git commit -m "publish: $(date -u -d '+9 hours' +%F) 주간 발행"
           git push

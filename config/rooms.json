@@ -1,0 +1,15 @@
+{
+  "_설명": "카카오톡 발송 대상 방. 관리 대시보드(windows/start_dashboard.ps1)에서 편집하세요 — 열려 있는 카톡 창 목록에서 고르므로 이름 오타가 나지 않습니다.",
+  "_categories": "hrd = HRD 뉴스 / safety = 산업안전 뉴스 / gov = 정부지원사업 공고",
+  "_style": "compact = 링크 카드 + TOP3 요약(기본) / full = 전체 목록 나열",
+  "_주의": "name 은 카카오톡 채팅창 제목과 한 글자도 달라선 안 됩니다. enabled 를 true 로 바꾸기 전에 [대상만 확인]으로 창을 찾는지 먼저 시험하세요.",
+  "rooms": [
+    {
+      "name": "여기에 단톡방 이름",
+      "categories": ["gov"],
+      "style": "compact",
+      "enabled": false,
+      "test": true
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "_설명": "정부지원사업 공고 수집 소스 설정. 관리 대시보드에서 편집할 수 있습니다.",
+  "days": 7,
+  "sources": {
+    "bizinfo": {
+      "enabled": true,
+      "label": "기업마당",
+      "max_items": 300
+    },
+    "kstartup": {
+      "enabled": true,
+      "label": "K-Startup",
+      "max_items": 300
+    },
+    "g2b": {
+      "enabled": true,
+      "label": "나라장터(용역)",
+      "max_items": 300,
+      "min_budget": 50000000,
+      "_min_budget_설명": "추정가격/배정예산이 이 금액 미만인 공고는 제외. 나라장터는 전 부처·전 지자체 입찰이 모두 들어와 물량이 매우 크므로 하한선이 필요합니다. 첫 실행 후 실제 건수를 보고 조정하세요."
+    },
+    "moel": {
+      "enabled": true,
+      "label": "고용노동부",
+      "max_items": 100
+    }
+  }
+}

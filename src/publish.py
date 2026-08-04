@@ -1,92 +1,72 @@
-"""docs/ (GitHub Pages) 산출물 작성.
+"""docs/ (GitHub Pages) 주차 발행물 작성.
 
 주차 폴더 구조:
-  issues/<date>/index.html        HRD + 산업안전 통합 리스트
-  issues/<date>/hrd.html          HRD 단독 리스트
-  issues/<date>/safety.html       산업안전 단독 리스트
-  issues/<date>/news/<cat>-<n>.html  기사 디테일 (요약 + 원문 버튼)
+  issues/<date>/index.html        구독 가능한 전체 카테고리 통합 리스트
+  issues/<date>/hrd.html          HRD 뉴스 단독
+  issues/<date>/safety.html       산업안전 뉴스 단독
+  issues/<date>/gov.html          정부지원사업 공고 단독
+  issues/<date>/news/<cat>-<n>.html  항목 디테일 (뉴스=요약, 공고=신청정보)
   issues/<date>/thumb.png         홍보 썸네일 (og:image)
-  issues/<date>/payload.json      봇 발송 데이터 (아카이브)
-  latest/payload.json             봇이 폴링하는 고정 경로
+  issues/<date>/payload.json      발송 데이터 (아카이브)
+  latest/payload.json             발송기가 읽는 고정 경로
+
+디자인은 theme.py(Meta 커머스 시스템)를 따른다 — 공고 대시보드(/gov/)와 같은
+토큰·네비·푸터를 쓰므로 두 화면이 한 시스템으로 보인다.
 """
+import html as html_mod
 import json
 import os
 import shutil
 from datetime import date, datetime
 
-from .message import fmt_date_ko
+from . import theme
+from .categories import CATEGORIES, is_gov, page_title, sort_cats
+from .message import fmt_date_ko, fmt_md
 
-CATEGORY_LABELS = {"hrd": "HRD", "safety": "산업안전"}
-CATEGORY_ICONS = {"hrd": "📚", "safety": "🦺"}
-CATEGORY_COLORS = {"hrd": "#2457C5", "safety": "#E8722A"}
+CATEGORY_LABELS = {k: v["label"] for k, v in CATEGORIES.items()}
+CATEGORY_ICONS = {k: v["icon"] for k, v in CATEGORIES.items()}
+CATEGORY_COLORS = {k: v["color"] for k, v in CATEGORIES.items()}
 
-BASE_CSS = """
-* { box-sizing: border-box; }
-body { font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', 'Noto Sans KR', sans-serif;
-       max-width: 640px; margin: 0 auto; padding: 0 16px 40px; color: #1a2b4c; background: #f5f7fc; }
-a { text-decoration: none; color: inherit; }
-.header { background: linear-gradient(160deg, #16295C, #2457C5); color: #fff; margin: 0 -16px;
-          padding: 28px 20px 24px; text-align: center; }
-.header .brand { font-size: .95rem; font-weight: 700; color: #9DB8E8; letter-spacing: .06em; }
-.header h1 { font-size: 1.35rem; margin: .4rem 0 .2rem; }
-.header .date { font-size: .85rem; color: #C9D9F5; }
-.tabs { display: flex; gap: 8px; margin: 16px 0 4px; }
-.tabs a { flex: 1; text-align: center; padding: 10px 0; border-radius: 10px; font-weight: 700;
-          font-size: .9rem; background: #fff; border: 1.5px solid #d7e0f2; color: #5a6b8c; }
-.tabs a.on { background: #16295C; border-color: #16295C; color: #fff; }
-h2.sec { font-size: 1.05rem; margin: 24px 0 10px; }
-.card { display: block; background: #fff; border-radius: 14px; padding: 14px 16px; margin: 10px 0;
-        box-shadow: 0 1px 4px rgba(22,41,92,.08); }
-.card .num { font-weight: 800; margin-right: 6px; }
-.card .t { font-weight: 700; font-size: .95rem; line-height: 1.45; }
-.card .m { font-size: .78rem; color: #8a97b0; margin-top: 6px; }
-.badge { display: inline-block; font-size: .72rem; font-weight: 800; color: #fff; border-radius: 6px;
-         padding: 3px 8px; margin-bottom: 10px; }
-.detail-title { font-size: 1.25rem; line-height: 1.45; margin: 0 0 10px; }
-.detail-meta { font-size: .82rem; color: #8a97b0; margin-bottom: 18px; }
-.summary { background: #fff; border-radius: 14px; padding: 18px; line-height: 1.7; font-size: .95rem;
-           box-shadow: 0 1px 4px rgba(22,41,92,.08); }
-.summary .lbl { font-size: .75rem; font-weight: 800; color: #2457C5; letter-spacing: .05em; margin-bottom: 8px; }
-.btn { display: block; text-align: center; margin: 18px 0; padding: 15px; border-radius: 12px;
-       font-weight: 800; font-size: .95rem; }
-.btn.primary { background: #2457C5; color: #fff; }
-.btn.ghost { background: #fff; color: #2457C5; border: 1.5px solid #2457C5; }
-.cta { display: block; margin: 28px 0 0; padding: 18px 16px; background: #16295C; color: #fff;
-       text-align: center; border-radius: 14px; }
-.cta .big { font-weight: 800; font-size: .95rem; }
-.cta .small { font-size: .78rem; color: #9DB8E8; margin-top: 4px; }
-.cta .bar { height: 4px; width: 56px; background: #FFC93C; margin: 0 auto 10px; border-radius: 2px; }
-img.thumb { width: 100%; border-radius: 14px; margin-top: 16px; }
-.back { display: inline-block; font-size: .85rem; color: #5a6b8c; font-weight: 700; margin: 14px 0 4px; }
+# 마감이 이 일수 이내면 카드에 강조 배지를 붙인다.
+SOON_DAYS = 7
+# 소스별로 접지 않고 바로 보여주는 공고 수 (나머지는 '더 보기'로 접힘)
+GOV_OPEN_PER_SOURCE = 10
+
+EXTRA_CSS = """
+.num{display:inline-block;min-width:38px;color:var(--muted);
+  font-size:14px;font-weight:700;letter-spacing:1.5px}
+.srcgrp{display:flex;align-items:baseline;gap:var(--s-sm);
+  color:var(--on-dark);margin:var(--s-xl) 0 var(--s-sm);
+  padding-bottom:var(--s-xs);border-bottom:1px solid var(--hairline-strong);
+  font-size:14px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase}
+.srcgrp .n{color:var(--muted);font-weight:300;letter-spacing:.5px}
+details.more{margin:0 0 var(--s-md)}
+details.more>summary{cursor:pointer;list-style:none;color:var(--on-dark);
+  background:transparent;border:1px solid var(--hairline);border-radius:var(--r-none);
+  padding:16px 32px;display:inline-block;min-height:48px;
+  font-size:14px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase}
+details.more>summary::-webkit-details-marker{display:none}
+details.more[open]>summary{margin-bottom:var(--s-md)}
+.warn{background:var(--surface-soft);border:1px solid var(--warning);
+  border-radius:var(--r-none);padding:var(--s-md) var(--s-lg);
+  color:var(--body-strong);margin:var(--s-md) 0;
+  font-size:14px;font-weight:300;line-height:1.6}
+.summary{background:var(--surface-soft);border:1px solid var(--hairline-strong);
+  border-radius:var(--r-none);padding:var(--s-lg);margin:var(--s-md) 0}
+.summary .lbl{color:var(--muted);margin-bottom:var(--s-sm);
+  font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase}
+.detail-title{margin:0 0 var(--s-md)}
+.detail-meta{color:var(--muted);margin:0 0 var(--s-xl);font-weight:300}
+.dash-link{display:block;background:var(--surface-card);
+  border:1px solid var(--hairline-strong);border-radius:var(--r-none);
+  padding:var(--s-lg);margin-bottom:var(--s-lg);color:var(--on-dark)}
+.dash-link:active{border-color:var(--on-dark)}
+.dash-link .sub{color:var(--body);margin-top:var(--s-xs);font-weight:300}
 """
 
-CTA_HTML = """<a class="cta" href="https://modulearning.kr">
-<div class="bar"></div>
-<div class="big">법정의무교육·산업안전보건교육은 모두의러닝</div>
-<div class="small">고용노동부 인증 · 기업 맞춤 이러닝 ▶ modulearning.kr</div>
-</a>"""
 
-
-def _page(title: str, desc: str, thumb_url: str, body: str) -> str:
-    return f"""<!DOCTYPE html>
-<html lang="ko">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{title}</title>
-<meta property="og:type" content="website">
-<meta property="og:title" content="{title}">
-<meta property="og:description" content="{desc}">
-<meta property="og:image" content="{thumb_url}">
-<meta property="og:image:width" content="1080">
-<meta property="og:image:height" content="1080">
-<style>{BASE_CSS}</style>
-</head>
-<body>
-{body}
-</body>
-</html>
-"""
+def esc(s) -> str:
+    return html_mod.escape(str(s or ""), quote=True)
 
 
 def _fmt_item_date(iso: str) -> str:
@@ -94,13 +74,68 @@ def _fmt_item_date(iso: str) -> str:
     return f"{d.month}.{d.day}"
 
 
-def _header(issue_date: date, subtitle: str) -> str:
-    return f"""<div class="header">
-<div class="brand">모두의러닝 WEEKLY NEWS</div>
-<h1>{subtitle}</h1>
-<div class="date">{fmt_date_ko(issue_date)}</div>
-</div>"""
+def _tabs(all_cats: list) -> list:
+    tabs = [("index.html", "전체", "all")]
+    tabs += [(f"{c}.html", CATEGORIES[c]["tab"], c) for c in sort_cats(all_cats)]
+    return tabs
 
+
+# ── 공고 ────────────────────────────────────────────────────────────────
+
+def _dday(item: dict, today: date):
+    """(남은 일수, 표시문자열, 배지 클래스)."""
+    end = item.get("period_end")
+    if not end:
+        return None, "상시 접수", "badge-success"
+    try:
+        d = date.fromisoformat(end[:10])
+    except ValueError:
+        return None, "상시 접수", "badge-success"
+    left = (d - today).days
+    if left < 0:
+        return left, "마감", "badge-neutral"
+    if left == 0:
+        return 0, "오늘 마감", "badge-critical"
+    if left <= 3:
+        return left, f"D-{left}", "badge-critical"
+    if left <= SOON_DAYS:
+        return left, f"D-{left}", "badge-attention"
+    return left, f"D-{left}", "badge-neutral"
+
+
+def _gov_card(cat: str, idx: int, it: dict, today: date) -> str:
+    _, label, cls = _dday(it, today)
+    meta_parts = [p for p in (it.get("org"), it.get("target")) if p]
+    end = fmt_md(it.get("period_end"))
+    meta_parts.append(f"신청 ~{end}" if end else "상시 접수")
+    return (
+        f'<a class="card" href="news/{cat}-{idx}.html">'
+        f'<div class="card-head"><h3 class="card-title t-sub-lg">'
+        f'<span class="num">{idx:02d}</span>{esc(it["title"])}'
+        f'<span class="badges"><span class="badge {cls}">{esc(label)}</span></span></h3></div>'
+        f'<p class="card-meta t-sm">{esc(" · ".join(meta_parts))}</p></a>'
+    )
+
+
+def _gov_cards(cat: str, items: list, today: date) -> str:
+    """소스별로 묶어 렌더. 소스 안에서는 마감 임박 순, 초과분은 접는다."""
+    groups = {}
+    for idx, it in enumerate(items, 1):
+        groups.setdefault(it.get("source") or "기타", []).append((idx, it))
+
+    out = []
+    for src, rows in groups.items():
+        out.append(f'<div class="srcgrp">{esc(src)}<span class="n">{len(rows)}건</span></div>')
+        head, tail = rows[:GOV_OPEN_PER_SOURCE], rows[GOV_OPEN_PER_SOURCE:]
+        out.extend(_gov_card(cat, i, it, today) for i, it in head)
+        if tail:
+            inner = "\n".join(_gov_card(cat, i, it, today) for i, it in tail)
+            out.append(f'<details class="more"><summary>{esc(src)} 나머지 {len(tail)}건 더 보기'
+                       f'</summary>\n{inner}\n</details>')
+    return "\n".join(out)
+
+
+# ── 뉴스 ────────────────────────────────────────────────────────────────
 
 def _news_cards(cat: str, items: list) -> str:
     cards = []
@@ -108,57 +143,131 @@ def _news_cards(cat: str, items: list) -> str:
         meta = " · ".join(x for x in (it.get("press", ""), _fmt_item_date(it["pubdate_iso"])) if x)
         cards.append(
             f'<a class="card" href="news/{cat}-{i}.html">'
-            f'<div class="t"><span class="num" style="color:{CATEGORY_COLORS[cat]}">{i:02d}</span>{it["title"]}</div>'
-            f'<div class="m">{meta}</div></a>'
+            f'<div class="card-head"><h3 class="card-title t-sub-lg">'
+            f'<span class="num">{i:02d}</span>{esc(it["title"])}</h3></div>'
+            f'<p class="card-meta t-sm">{esc(meta)}</p></a>'
         )
     return "\n".join(cards)
 
 
-def _tabs(active: str) -> str:
-    links = [("index.html", "전체", "all"), ("hrd.html", "📚 HRD", "hrd"), ("safety.html", "🦺 산업안전", "safety")]
-    return '<div class="tabs">' + "".join(
-        f'<a href="{href}" class="{"on" if key == active else ""}">{label}</a>' for href, label, key in links
-    ) + "</div>"
-
+# ── 페이지 ──────────────────────────────────────────────────────────────
 
 def _list_page(issue_date: date, items_by_cat: dict, cats: list, active: str,
-               title: str, thumb_url: str) -> str:
+               all_cats: list, thumb_url: str, base_url: str,
+               gov_errors: list = None) -> str:
+    cats = sort_cats(cats)
+    title = page_title(cats)
+    gov_only = all(is_gov(c) for c in cats)
+
     sections = []
     for cat in cats:
-        items = items_by_cat[cat]
-        sections.append(f'<h2 class="sec">{CATEGORY_ICONS[cat]} 주간 {CATEGORY_LABELS[cat]} 뉴스 ({len(items)}건)</h2>')
-        sections.append(_news_cards(cat, items))
-    body = _header(issue_date, title) + _tabs(active) + "\n".join(sections) + CTA_HTML
-    return _page(f"모두의러닝 {title} ({issue_date.month}/{issue_date.day})",
-                 "제목을 누르면 요약과 원문을 볼 수 있습니다", thumb_url, body)
+        items = items_by_cat.get(cat, [])
+        meta = CATEGORIES[cat]
+        sections.append(f'<h2 class="sec-head t-h-lg">{meta["section"]}'
+                        f'<span class="n">{len(items)}건</span></h2>')
+        if not items:
+            sections.append('<div class="empty t-body">이번 주에는 새로 올라온 항목이 없습니다.</div>')
+        elif is_gov(cat):
+            if gov_errors:
+                sections.append('<div class="warn">이번 주 수집에 실패한 소스가 있습니다 — '
+                                + esc(", ".join(gov_errors)) + '</div>')
+            sections.append(
+                f'<a class="dash-link" href="{esc(base_url)}/gov/">'
+                f'<div class="t-body-b">진행 중인 공고 전부 보기 →</div>'
+                f'<div class="sub t-sm">이 페이지는 이번 주에 새로 뜬 공고만 담습니다. '
+                f'아직 마감되지 않은 공고 전체는 모아보기에서 확인하세요.</div></a>')
+            sections.append(_gov_cards(cat, items, issue_date))
+        else:
+            sections.append(_news_cards(cat, items))
+
+    lede = ("마감일이 가까운 순서로 정렬했습니다. 공고를 누르면 신청 정보와 원문을 볼 수 있습니다."
+            if gov_only else "제목을 누르면 요약과 원문 기사를 볼 수 있습니다.")
+    body = (theme.PROMO_BANNER
+            + theme.topnav(_tabs(all_cats), active)
+            + '<div class="wrap">'
+            + f'<header class="hero"><h1 class="t-hero">{esc(title)}</h1>'
+            + f'<p class="lede t-sub-md">{lede}</p>'
+            + f'<p class="stamp t-sm">{fmt_date_ko(issue_date)} 발행</p></header>'
+            + "\n".join(sections)
+            + theme.PROMO_STRIP + theme.footer() + "</div>")
+
+    return theme.page(f"모두의러닝 {title} ({issue_date.month}/{issue_date.day})",
+                      lede, thumb_url, body, EXTRA_CSS)
 
 
-def _detail_page(issue_date: date, cat: str, idx: int, it: dict, total: int, thumb_url: str) -> str:
+def _news_detail(cat: str, idx: int, it: dict, total: int, thumb_url: str,
+                 all_cats: list, issue_date: date) -> str:
     desc = it.get("description") or "요약이 제공되지 않은 기사입니다. 아래 원문 보기를 눌러 전체 내용을 확인하세요."
     meta = " · ".join(x for x in (it.get("press", ""), _fmt_item_date(it["pubdate_iso"])) if x)
-    list_href = "../index.html"
-    body = f"""<a class="back" href="../{cat}.html">← {CATEGORY_LABELS[cat]} 뉴스 목록</a>
-<span class="badge" style="background:{CATEGORY_COLORS[cat]}; float:right; margin-top:14px">{CATEGORY_ICONS[cat]} {CATEGORY_LABELS[cat]} {idx}/{total}</span>
-<h1 class="detail-title" style="clear:both">{it['title']}</h1>
-<div class="detail-meta">{meta}</div>
-<div class="summary"><div class="lbl">뉴스 요약</div>{desc}</div>
-<a class="btn primary" href="{it['link']}" target="_blank" rel="noopener">📰 원문 기사 보기</a>
-<a class="btn ghost" href="{list_href}">전체 뉴스 목록</a>
-{CTA_HTML}"""
-    return _page(f"{it['title']} | 모두의러닝 주간뉴스",
-                 desc[:80], thumb_url, body)
+    tabs = [(f"../{h}", l, k) for h, l, k in _tabs(all_cats)]
+    body = (theme.PROMO_BANNER
+            + theme.topnav(tabs, cat, home="../index.html")
+            + '<div class="wrap wrap-narrow">'
+            + f'<a class="back" href="../{cat}.html">← {CATEGORY_LABELS[cat]} 뉴스 목록</a>'
+            + f'<span class="badge badge-neutral" style="float:right;margin-top:var(--s-xl)">'
+            + f'{CATEGORY_ICONS[cat]} {CATEGORY_LABELS[cat]} {idx}/{total}</span>'
+            + f'<h1 class="detail-title t-h-lg" style="clear:both">{esc(it["title"])}</h1>'
+            + f'<p class="detail-meta t-sm">{esc(meta)}</p>'
+            + f'<div class="summary"><div class="lbl">뉴스 요약</div>'
+            + f'<div class="t-body">{esc(desc)}</div></div>'
+            + '<div class="acts">'
+            + f'<a class="btn btn-primary" href="{esc(it["link"])}" target="_blank" '
+            + 'rel="noopener">원문 기사 보기</a>'
+            + f'<a class="btn btn-ghost" href="../{cat}.html">전체 목록</a></div>'
+            + theme.PROMO_STRIP + theme.footer() + "</div>")
+    return theme.page(f"{it['title']} | 모두의러닝 주간 소식", desc[:80], thumb_url, body, EXTRA_CSS)
+
+
+def _gov_detail(cat: str, idx: int, it: dict, total: int, thumb_url: str,
+                today: date, all_cats: list) -> str:
+    _, dlabel, dcls = _dday(it, today)
+    start, end = fmt_md(it.get("period_start")), fmt_md(it.get("period_end"))
+    if start and end:
+        period = f"{start} ~ {end}"
+    elif end:
+        period = f"~ {end}"
+    else:
+        period = "상시 접수 / 공고 원문 확인"
+
+    rows = [("소관기관", it.get("org")), ("신청기간", f"{period} ({dlabel})"),
+            ("지원대상", it.get("target")), ("사업규모", it.get("budget")),
+            ("출처", it.get("source"))]
+    kv = "\n".join(f'<div class="spec"><div class="k">{k}</div>'
+                   f'<div class="v">{esc(v)}</div></div>' for k, v in rows if v)
+    summary = it.get("summary") or ""
+    summary_html = (f'<div class="summary"><div class="lbl">사업 개요</div>'
+                    f'<div class="t-body">{esc(summary)}</div></div>' if summary else "")
+
+    tabs = [(f"../{h}", l, k) for h, l, k in _tabs(all_cats)]
+    body = (theme.PROMO_BANNER
+            + theme.topnav(tabs, cat, home="../index.html")
+            + '<div class="wrap wrap-narrow">'
+            + f'<a class="back" href="../{cat}.html">← {CATEGORY_LABELS[cat]} 공고 목록</a>'
+            + f'<span class="badge {dcls}" style="float:right;margin-top:var(--s-xl)">'
+            + f'{esc(dlabel)}</span>'
+            + f'<h1 class="detail-title t-h-lg" style="clear:both">{esc(it["title"])}</h1>'
+            + f'<div class="panel">{kv}</div>'
+            + summary_html
+            + '<div class="acts">'
+            + f'<a class="btn btn-primary" href="{esc(it["link"])}" target="_blank" '
+            + 'rel="noopener">공고 원문 보기</a>'
+            + f'<a class="btn btn-ghost" href="../{cat}.html">전체 목록</a></div>'
+            + theme.PROMO_STRIP + theme.footer() + "</div>")
+    return theme.page(f"{it['title']} | 모두의러닝 정부지원사업 공고",
+                      (summary or it.get("org") or "")[:80], thumb_url, body, EXTRA_CSS)
 
 
 LATEST_REDIRECT = """<!DOCTYPE html>
 <html lang="ko">
-<head><meta charset="utf-8"><meta http-equiv="refresh" content="0; url={url}"><title>모두의러닝 주간 뉴스</title></head>
-<body><a href="{url}">최신 뉴스 보기</a></body>
+<head><meta charset="utf-8"><meta http-equiv="refresh" content="0; url={url}">
+<title>모두의러닝 주간 소식</title></head>
+<body><a href="{url}">최신 소식 보기</a></body>
 </html>
 """
 
 
 def publish(issue_date: date, items_by_cat: dict, payload: dict, thumb_src: str,
-            docs_dir: str = "docs", base_url: str = "") -> str:
+            docs_dir: str = "docs", base_url: str = "", gov_errors: list = None) -> str:
     issue_key = issue_date.isoformat()
     issue_dir = os.path.join(docs_dir, "issues", issue_key)
     news_dir = os.path.join(issue_dir, "news")
@@ -169,24 +278,28 @@ def publish(issue_date: date, items_by_cat: dict, payload: dict, thumb_src: str,
     page_url = f"{base_url}/issues/{issue_key}/"
     thumb_url = page_url + "thumb.png"
 
-    pages = {
-        "index.html": _list_page(issue_date, items_by_cat, ["hrd", "safety"], "all",
-                                 "주간 HRD·산업안전 뉴스", thumb_url),
-        "hrd.html": _list_page(issue_date, items_by_cat, ["hrd"], "hrd",
-                               "주간 HRD 뉴스", thumb_url),
-        "safety.html": _list_page(issue_date, items_by_cat, ["safety"], "safety",
-                                  "주간 산업안전 뉴스", thumb_url),
-    }
-    for name, html in pages.items():
+    all_cats = sort_cats(items_by_cat.keys())
+
+    pages = {"index.html": _list_page(issue_date, items_by_cat, all_cats, "all",
+                                      all_cats, thumb_url, base_url, gov_errors)}
+    for cat in all_cats:
+        pages[f"{cat}.html"] = _list_page(issue_date, items_by_cat, [cat], cat,
+                                          all_cats, thumb_url, base_url, gov_errors)
+    for name, page_html in pages.items():
         with open(os.path.join(issue_dir, name), "w", encoding="utf-8") as f:
-            f.write(html)
+            f.write(page_html)
 
-    for cat, items in items_by_cat.items():
+    for cat in all_cats:
+        items = items_by_cat[cat]
         for i, it in enumerate(items, 1):
+            page_html = (_gov_detail(cat, i, it, len(items), thumb_url, issue_date, all_cats)
+                         if is_gov(cat) else
+                         _news_detail(cat, i, it, len(items), thumb_url, all_cats, issue_date))
             with open(os.path.join(news_dir, f"{cat}-{i}.html"), "w", encoding="utf-8") as f:
-                f.write(_detail_page(issue_date, cat, i, it, len(items), thumb_url))
+                f.write(page_html)
 
-    for dst in (os.path.join(issue_dir, "payload.json"), os.path.join(docs_dir, "latest", "payload.json")):
+    for dst in (os.path.join(issue_dir, "payload.json"),
+                os.path.join(docs_dir, "latest", "payload.json")):
         with open(dst, "w", encoding="utf-8") as f:
             json.dump(payload, f, ensure_ascii=False, indent=2)
 

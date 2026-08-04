@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#000000">
+<title>정부지원사업 모아보기 | 모두의러닝</title>
+<meta property="og:type" content="website">
+<meta property="og:title" content="정부지원사업 모아보기 | 모두의러닝">
+<meta property="og:description" content="지금 신청할 수 있는 정부지원사업 공고를 마감 임박 순으로 모았습니다.">
+<meta property="og:image" content="https://jwchoi061217-web.github.io/-/gov/thumb.png">
+<meta property="og:image:width" content="1080">
+<meta property="og:image:height" content="1080">
+<style>
+:root{
+  /* M 트라이컬러 — 브랜드 표식 전용, 채움 금지 */
+  --m-blue-light:#0066b1; --m-blue-dark:#1c69d4; --m-red:#e22718;
+  --bmw-blue:#1c69d4; --electric-blue:#0653b6;
+  /* Surface */
+  --canvas:#000000; --surface-soft:#0d0d0d; --surface-card:#1a1a1a;
+  --surface-elevated:#262626; --carbon-gray:#2b2b2b;
+  /* Hairline */
+  --hairline:#3c3c3c; --hairline-strong:#262626;
+  /* Text */
+  --on-dark:#ffffff; --body:#bbbbbb; --body-strong:#e6e6e6; --muted:#7e7e7e;
+  /* Semantic */
+  --warning:#f4b400; --success:#0fa336;
+  /* Radius — 기본 0, 원형만 예외 */
+  --r-none:0px; --r-xs:2px; --r-sm:4px; --r-md:6px; --r-full:9999px;
+  /* Spacing (4px 베이스) */
+  --s-xxs:4px; --s-xs:8px; --s-sm:12px; --s-md:16px; --s-lg:24px;
+  --s-xl:40px; --s-xxl:64px; --s-sec:96px;
+  --font:Inter,'BMW Type Next Latin',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Malgun Gothic','Apple SD Gothic Neo','Noto Sans KR',sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--canvas);color:var(--body);font-family:var(--font);
+  font-size:16px;font-weight:300;line-height:1.5;
+  -webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}
+button,input,textarea,select{font-family:inherit}
+img{max-width:100%;display:block}
+::selection{background:var(--on-dark);color:var(--canvas)}
+
+/* ── M 트라이컬러 스트라이프 — 시스템의 유일한 장식 요소 ── */
+.m-stripe{height:4px;width:100%;border:0;margin:0;
+  background:linear-gradient(90deg,
+    var(--m-blue-light) 0 33.33%,
+    var(--m-blue-dark) 33.33% 66.66%,
+    var(--m-red) 66.66% 100%)}
+.m-stripe-short{width:96px}
+
+/* ── Typography ────────────────────────────────────────────
+   Inter 대체 시 디스플레이 자간을 -0.5px 로 조인다(스펙 권고). */
+.t-hero{font-size:80px;font-weight:700;line-height:1.0;letter-spacing:-.5px;
+  color:var(--on-dark);text-transform:uppercase}
+.t-display{font-size:56px;font-weight:700;line-height:1.05;letter-spacing:-.5px;
+  color:var(--on-dark);text-transform:uppercase}
+.t-h-lg{font-size:40px;font-weight:700;line-height:1.1;letter-spacing:-.5px;
+  color:var(--on-dark);text-transform:uppercase}
+.t-h-md{font-size:32px;font-weight:700;line-height:1.15;letter-spacing:-.5px;
+  color:var(--on-dark);text-transform:uppercase}
+.t-h-sm{font-size:24px;font-weight:700;line-height:1.3;color:var(--on-dark)}
+.t-sub-lg{font-size:24px;font-weight:700;line-height:1.3;color:var(--on-dark)}
+.t-sub-md{font-size:20px;font-weight:400;line-height:1.4;color:var(--body-strong)}
+.t-sub-sm{font-size:18px;font-weight:400;line-height:1.4;color:var(--body-strong)}
+.t-body{font-size:16px;font-weight:300;line-height:1.5;color:var(--body)}
+.t-body-b{font-size:16px;font-weight:400;line-height:1.5;color:var(--body-strong)}
+.t-sm{font-size:14px;font-weight:300;line-height:1.5;color:var(--body)}
+.t-sm-b,.t-label{font-size:14px;font-weight:700;line-height:1.3;letter-spacing:1.5px;
+  text-transform:uppercase;color:var(--on-dark)}
+.t-cap{font-size:12px;font-weight:400;line-height:1.4;letter-spacing:.5px;color:var(--muted)}
+.t-cap-b{font-size:12px;font-weight:700;line-height:1.4;letter-spacing:.5px;color:var(--on-dark)}
+
+/* ── promo-banner (nav 위) ── */
+.promo-banner{background:var(--canvas);color:var(--body);
+  border-bottom:1px solid var(--hairline-strong);
+  padding:var(--s-sm) var(--s-lg);text-align:center;
+  font-size:12px;font-weight:400;line-height:1.4;letter-spacing:.5px;text-transform:uppercase}
+.promo-banner a{color:var(--on-dark);border-bottom:1px solid var(--hairline)}
+.promo-banner .clip{display:inline-block;max-width:100%;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom}
+
+/* ── Top navigation ── */
+.topnav{position:sticky;top:0;z-index:40;background:var(--canvas);
+  border-bottom:1px solid var(--hairline-strong)}
+.nav-inner{max-width:1440px;margin:0 auto;padding:0 var(--s-xl);min-height:64px;
+  display:flex;align-items:center;gap:var(--s-xl)}
+.wordmark{display:flex;align-items:center;gap:var(--s-sm);color:var(--on-dark);
+  font-size:18px;font-weight:700;letter-spacing:.5px;white-space:nowrap;text-transform:uppercase}
+.wordmark .bar{display:block;width:28px;height:4px;
+  background:linear-gradient(90deg,var(--m-blue-light) 0 33.33%,
+    var(--m-blue-dark) 33.33% 66.66%,var(--m-red) 66.66% 100%)}
+.nav-tabs{display:flex;gap:var(--s-lg);flex:1;flex-wrap:wrap}
+.nav-right{display:flex;align-items:center;gap:var(--s-md);margin-left:auto}
+.hamburger{display:none;width:48px;height:48px;border:0;background:transparent;
+  color:var(--on-dark);font-size:20px;cursor:pointer;border-radius:var(--r-none)}
+
+/* category-tab — 채움 없음. 활성은 흰 글자 + 2px 밑줄 */
+.pill-tab{display:inline-flex;align-items:center;background:transparent;color:var(--body);
+  border:0;border-bottom:2px solid transparent;border-radius:var(--r-none);
+  padding:12px 0;cursor:pointer;
+  font-size:14px;font-weight:700;line-height:1.3;letter-spacing:1.5px;
+  text-transform:uppercase;white-space:nowrap}
+.pill-tab.on{color:var(--on-dark);border-bottom-color:var(--on-dark)}
+.pill-tab:active{color:var(--on-dark)}
+
+/* text-input / search */
+.search-pill{background:var(--surface-card);color:var(--on-dark);
+  border:1px solid var(--hairline);border-radius:var(--r-none);
+  height:48px;padding:0 var(--s-md);width:240px;
+  font-size:16px;font-weight:300;line-height:1.5}
+.search-pill::placeholder{color:var(--muted)}
+.search-pill:focus{outline:none;border-color:var(--on-dark)}
+
+/* ── Layout — 밴드 리듬 96px ── */
+.wrap{max-width:1440px;margin:0 auto;padding:0 var(--s-xl) var(--s-sec)}
+.wrap-narrow{max-width:900px}
+.hero{padding:var(--s-xxl) 0 var(--s-xl)}
+.hero h1{margin:0 0 var(--s-lg)}
+.hero .lede{color:var(--body);max-width:680px;margin:0;font-weight:300}
+.hero .stamp{color:var(--muted);margin-top:var(--s-md);
+  font-size:12px;letter-spacing:.5px;text-transform:uppercase}
+
+/* Cards — 모서리 0, 그림자 없음 */
+.panel{background:var(--surface-soft);border:1px solid var(--hairline-strong);
+  border-radius:var(--r-none);padding:var(--s-lg);margin-bottom:var(--s-lg)}
+.card{display:block;background:var(--canvas);border:1px solid var(--hairline-strong);
+  border-radius:var(--r-none);padding:var(--s-lg);margin-bottom:var(--s-sm)}
+.card:active{border-color:var(--hairline)}
+.card-head{display:flex;gap:var(--s-md);align-items:flex-start}
+.card-title{flex:1;color:var(--on-dark);margin:0}
+.card-meta{color:var(--muted);margin-top:var(--s-xs);font-weight:300}
+.sec-head{margin:var(--s-sec) 0 var(--s-lg);padding-top:var(--s-lg);
+  border-top:1px solid var(--hairline-strong)}
+.sec-head:first-of-type{margin-top:var(--s-xl)}
+.sec-head .n{color:var(--muted);font-size:14px;font-weight:300;letter-spacing:1.5px;
+  margin-left:var(--s-sm);text-transform:uppercase}
+
+/* Badges — 트라이컬러를 채움으로 쓰지 않는다. 외곽선 + 대문자 라벨. */
+.badges{display:inline-flex;gap:var(--s-xs);margin-left:var(--s-sm);vertical-align:3px}
+.badge{border-radius:var(--r-none);padding:4px 10px;white-space:nowrap;
+  border:1px solid currentColor;background:transparent;
+  font-size:12px;font-weight:700;line-height:1.3;letter-spacing:1.5px;text-transform:uppercase}
+.badge-critical{color:var(--m-red)}
+.badge-attention{color:var(--warning)}
+.badge-neutral{color:var(--muted)}
+.badge-success{color:var(--success)}
+.badge-promo{color:var(--on-dark)}
+
+/* Buttons — 채우지 않는다. 흰 외곽선 + 대문자 1.5px 자간. 48px 높이. */
+.acts{display:flex;gap:var(--s-sm);margin-top:var(--s-lg);flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;justify-content:center;
+  min-height:48px;padding:16px 32px;border-radius:var(--r-none);cursor:pointer;
+  white-space:nowrap;background:transparent;
+  font-size:14px;font-weight:700;line-height:1;letter-spacing:1.5px;text-transform:uppercase}
+.btn-primary{color:var(--on-dark);border:1px solid var(--on-dark)}
+.btn-primary:active{background:var(--on-dark);color:var(--canvas)}
+.btn-ghost{color:var(--body);border:1px solid var(--hairline)}
+.btn-ghost:active{border-color:var(--on-dark);color:var(--on-dark)}
+.btn-secondary-dark{color:var(--on-dark);border:1px solid var(--on-dark)}
+.btn-secondary-dark:active{background:var(--on-dark);color:var(--canvas)}
+/* button-icon — 시스템에서 유일하게 원형이 허용되는 자리 */
+.icon-btn{width:48px;height:48px;min-width:48px;border-radius:var(--r-full);
+  background:var(--surface-card);border:1px solid var(--hairline);
+  color:var(--on-dark);cursor:pointer;font-size:16px;line-height:1}
+.icon-btn:active{background:var(--surface-elevated)}
+
+/* spec-cell — 값(32/700) + 대문자 라벨 */
+.spec{display:flex;gap:var(--s-md);padding:var(--s-sm) 0;
+  border-bottom:1px solid var(--hairline-strong)}
+.spec:last-of-type{border-bottom:0}
+.spec .k{flex:0 0 104px;color:var(--muted);
+  font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase}
+.spec .v{flex:1;color:var(--body-strong);font-size:16px;font-weight:300}
+
+.empty{background:var(--surface-soft);border:1px solid var(--hairline-strong);
+  border-radius:var(--r-none);padding:var(--s-xxl) var(--s-lg);
+  text-align:center;color:var(--muted)}
+.back{display:inline-block;color:var(--body);margin:var(--s-xl) 0 var(--s-md);
+  font-size:14px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase}
+.back:active{color:var(--on-dark)}
+
+/* cta-band — 사진이 없으므로 M 스트라이프 + 큰 디스플레이 타입으로 무게를 만든다 */
+.promo-strip{background:var(--canvas);border-top:1px solid var(--hairline-strong);
+  border-bottom:1px solid var(--hairline-strong);
+  border-radius:var(--r-none);padding:80px var(--s-lg);margin-top:var(--s-sec);
+  text-align:center}
+.promo-strip .rule{height:4px;width:96px;margin:0 auto var(--s-lg);
+  background:linear-gradient(90deg,var(--m-blue-light) 0 33.33%,
+    var(--m-blue-dark) 33.33% 66.66%,var(--m-red) 66.66% 100%)}
+.promo-strip h2{margin:0 0 var(--s-md)}
+.promo-strip p{color:var(--body);margin:0 0 var(--s-xl);font-weight:300}
+
+/* footer — 4단, 항상 검정 */
+.footer{border-top:1px solid var(--hairline-strong);margin-top:var(--s-sec);
+  padding:var(--s-xxl) 0}
+.footer-cols{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--s-xl)}
+.footer h3{color:var(--on-dark);margin:0 0 var(--s-md);
+  font-size:14px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase}
+.footer ul{margin:0;padding:0}
+.footer li{list-style:none;color:var(--body);margin-bottom:var(--s-xs);
+  font-size:14px;font-weight:300;line-height:1.5}
+.footer .legal{color:var(--muted);border-top:1px solid var(--hairline-strong);
+  margin-top:var(--s-xl);padding-top:var(--s-lg);
+  font-size:12px;font-weight:400;line-height:1.7;letter-spacing:.5px}
+
+/* ── Responsive ── */
+@media (max-width:1024px){
+  .footer-cols{grid-template-columns:repeat(2,1fr)}
+  .t-hero{font-size:56px}
+}
+@media (max-width:767px){
+  .nav-inner{padding:var(--s-sm) var(--s-md);gap:var(--s-md);flex-wrap:wrap}
+  .hamburger{display:block;order:3;margin-left:auto}
+  .nav-tabs{display:none;order:4;flex-basis:100%;gap:var(--s-md);
+    flex-direction:column;padding-bottom:var(--s-md);
+    border-top:1px solid var(--hairline-strong);margin-top:var(--s-sm)}
+  .nav-tabs.open{display:flex}
+  .pill-tab{border-bottom:0;border-left:2px solid transparent;padding:12px 0 12px 12px}
+  .pill-tab.on{border-bottom-color:transparent;border-left-color:var(--on-dark)}
+  .nav-right{order:2}
+  .search-pill{width:150px}
+  .wrap{padding:0 var(--s-md) var(--s-xxl)}
+  .hero{padding:var(--s-xl) 0 var(--s-lg)}
+  .t-hero{font-size:48px}
+  .t-display{font-size:36px}
+  .t-h-lg{font-size:28px}
+  .t-h-md{font-size:24px}
+  .sec-head{margin:var(--s-xxl) 0 var(--s-md)}
+  .footer-cols{grid-template-columns:1fr;gap:var(--s-lg)}
+  .promo-strip{padding:var(--s-xl) var(--s-md)}
+  .acts .btn{flex:1}
+}
+@media (max-width:479px){
+  .t-hero{font-size:36px}
+}
+
+/* spec-cell — 값(32/700) + 대문자 라벨. 4-up */
+.stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;
+  background:var(--hairline-strong);border:1px solid var(--hairline-strong);
+  margin-bottom:var(--s-xl)}
+.stat{background:var(--surface-soft);border-radius:var(--r-none);padding:var(--s-lg)}
+.stat .v{font-size:32px;font-weight:700;line-height:1.15;letter-spacing:-.5px;
+  color:var(--on-dark)}
+.stat .k{color:var(--muted);margin-top:var(--s-xs);
+  font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase}
+.stat.is-hot .v{color:var(--m-red)}
+
+.panel h2{margin:0 0 var(--s-md)}
+.chips{display:flex;gap:var(--s-lg);flex-wrap:wrap}
+.filterbar{display:flex;align-items:center;gap:var(--s-md);
+  margin:0 0 var(--s-md);padding-bottom:var(--s-sm);
+  border-bottom:1px solid var(--hairline-strong)}
+.filterbar .count{color:var(--muted);
+  font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase}
+.filterbar .sp{flex:1}
+.sortsel{background:var(--surface-card);color:var(--on-dark);
+  border:1px solid var(--hairline);border-radius:var(--r-none);
+  height:48px;padding:0 var(--s-md);
+  font-size:14px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase}
+.sortsel:focus{outline:none;border-color:var(--on-dark)}
+
+/* 마감 달력 */
+.calhead{display:flex;align-items:center;gap:var(--s-md);margin-bottom:var(--s-md)}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;
+  background:var(--hairline-strong);border:1px solid var(--hairline-strong)}
+.cal .dow{text-align:center;background:var(--canvas);color:var(--muted);
+  padding:var(--s-xs) 0;font-size:12px;font-weight:700;letter-spacing:.5px}
+.cal .day{aspect-ratio:1;border-radius:var(--r-none);background:var(--surface-soft);
+  color:var(--muted);display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:2px;font-size:14px;font-weight:300}
+.cal .day.blank{background:var(--canvas)}
+.cal .day.has{background:var(--surface-elevated);color:var(--on-dark);
+  font-weight:700;cursor:pointer}
+.cal .day.has .n{font-size:11px;font-weight:700;letter-spacing:.5px;color:var(--m-red)}
+.cal .day.sel{background:var(--on-dark);color:var(--canvas)}
+.cal .day.sel .n{color:var(--canvas)}
+
+/* button-icon — 원형이 허용되는 유일한 자리 */
+.starbtn{width:48px;height:48px;min-width:48px;border-radius:var(--r-full);
+  border:1px solid var(--hairline);background:var(--surface-card);
+  color:var(--muted);font-size:18px;line-height:1;cursor:pointer}
+.starbtn.on{color:var(--on-dark);border-color:var(--on-dark)}
+.starbtn:active{background:var(--surface-elevated)}
+
+.det{margin-top:var(--s-md);border-top:1px solid var(--hairline-strong);
+  padding-top:var(--s-md)}
+.det .lede{color:var(--body);margin:0 0 var(--s-md);font-weight:300}
+.memo{width:100%;margin-top:var(--s-md);min-height:80px;resize:vertical;
+  background:var(--surface-card);color:var(--on-dark);
+  border:1px solid var(--hairline);border-radius:var(--r-none);
+  padding:12px 16px;font-size:16px;font-weight:300;line-height:1.5}
+.memo:focus{outline:none;border-color:var(--on-dark)}
+.saved{color:var(--success);margin-top:var(--s-xs);
+  font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase}
+
+@media (max-width:1024px){ .stat-row{grid-template-columns:repeat(2,1fr)} }
+@media (max-width:767px){ .chips{gap:var(--s-md)} }
+</style>
+</head>
+<body>
+<hr class="m-stripe">
+<div class="promo-banner">
+  <span class="clip">AI 기업교육 모두의러닝 · 고용노동부 지정 원격훈련기관 ·
+    <a href="https://modulearning.kr" target="_blank" rel="noopener">알아보기</a></span>
+</div>
+
+<nav class="topnav">
+  <div class="nav-inner">
+    <a class="wordmark" href="./">모두의러닝</a>
+    <div class="nav-tabs" id="navTabs">
+      <button class="pill-tab on" data-f="all">전체</button>
+      <button class="pill-tab" data-f="soon">마감 임박</button>
+      <button class="pill-tab" data-f="new">이번주 신규</button>
+      <button class="pill-tab" data-f="star">관심</button>
+    </div>
+    <div class="nav-right">
+      <input class="search-pill" type="search" id="q" placeholder="공고·기관 검색">
+    </div>
+    <button class="hamburger" id="burger" aria-label="메뉴" aria-expanded="false">☰</button>
+  </div>
+</nav>
+
+<div class="wrap">
+  <header class="hero">
+    <h1 class="t-hero">정부지원사업<br>모아보기</h1>
+    <p class="lede t-sub-md">지금 신청할 수 있는 공고를 마감 임박 순으로 모았습니다.
+      매주 월요일 아침에 갱신되고, 마감된 공고는 자동으로 빠집니다.</p>
+    <p class="stamp" id="updated">불러오는 중…</p>
+  </header>
+
+  <section class="stat-row">
+    <div class="stat"><div class="v" id="tTotal">–</div><div class="k t-sm">진행 중인 공고</div></div>
+    <div class="stat"><div class="v" id="tNew">–</div><div class="k t-sm">이번주 신규</div></div>
+    <div class="stat is-hot"><div class="v" id="tSoon">–</div><div class="k t-sm">7일 내 마감</div></div>
+    <div class="stat is-star"><div class="v" id="tStar">–</div><div class="k t-sm">내 관심 공고</div></div>
+  </section>
+
+  <section class="panel">
+    <h2 class="t-h-sm">출처</h2>
+    <div class="chips" id="srcChips"></div>
+  </section>
+
+  <section class="panel">
+    <div class="calhead">
+      <button class="icon-btn" onclick="moveMonth(-1)" aria-label="이전 달">‹</button>
+      <h2 class="t-h-sm" id="calLabel" style="margin:0;flex:1"></h2>
+      <button class="icon-btn" onclick="moveMonth(1)" aria-label="다음 달">›</button>
+      <button class="btn btn-ghost" id="calClear" style="display:none" onclick="clearDay()">날짜 해제</button>
+    </div>
+    <div class="cal" id="cal"></div>
+  </section>
+
+  <div class="filterbar">
+    <span class="count t-sm-b" id="count">–</span>
+    <span class="sp"></span>
+    <select class="sortsel" id="sort">
+      <option value="end">마감 임박 순</option>
+      <option value="new">최근 올라온 순</option>
+      <option value="org">기관 순</option>
+    </select>
+  </div>
+
+  <div id="list"></div>
+
+  <section class="promo-strip">
+  <div class="rule"></div>
+  <h2 class="t-h-lg">AI 기업교육 모두의러닝</h2>
+  <p class="t-sub-md">고용노동부 지정 원격훈련기관 · 기업 맞춤 이러닝</p>
+  <a class="btn btn-primary" href="https://modulearning.kr"
+     target="_blank" rel="noopener">modulearning.kr</a>
+</section>
+  <footer class="footer">
+  <div class="footer-cols">
+    <div>
+      <h3>이 페이지</h3>
+      <ul>
+        <li>매주 월요일 아침 자동 발행</li>
+        <li>마감된 공고는 자동 제외</li>
+        <li>마감 임박 순 정렬</li>
+      </ul>
+    </div>
+    <div>
+      <h3>수집 출처</h3>
+      <ul>
+        <li>기업마당</li>
+        <li>K-Startup</li>
+        <li>나라장터 (용역)</li>
+        <li>고용노동부</li>
+      </ul>
+    </div>
+    <div>
+      <h3>주간 소식</h3>
+      <ul>
+        <li>정부지원사업 공고</li>
+        <li>HRD 뉴스</li>
+        <li>산업안전 뉴스</li>
+      </ul>
+    </div>
+    <div>
+      <h3>모두의러닝</h3>
+      <ul>
+        <li><a href="https://modulearning.kr" target="_blank" rel="noopener">modulearning.kr</a></li>
+        <li>법정의무교육</li>
+        <li>산업안전보건교육</li>
+        <li>AI 기업교육</li>
+      </ul>
+    </div>
+  </div>
+  <div class="legal">⭐관심 표시와 메모는 <b>이 브라우저에만</b> 저장됩니다 — 다른 사람에게는 보이지 않고, 브라우저 데이터를 지우거나 다른 기기에서 열면 사라집니다.<br>
+    신청 마감일과 자격 요건은 반드시 공고 원문에서 다시 확인하세요.
+    내용은 각 기관·언론사의 공개 데이터를 옮긴 것이며 최종 기준은 원문입니다.
+  </div>
+</footer>
+</div>
+
+<script>
+const LS = 'govdash.v1';
+let DATA = {items: [], updated: '', issue_key: ''};
+let mine = {star: {}, memo: {}};
+let quick = 'all', srcFilter = new Set(), selDay = null, calMonth = null;
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c =>
+  ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+try { mine = Object.assign(mine, JSON.parse(localStorage.getItem(LS) || '{}')); } catch (e) {}
+const save = () => { try { localStorage.setItem(LS, JSON.stringify(mine)); } catch (e) {} };
+
+const today = () => { const d = new Date(); d.setHours(0,0,0,0); return d; };
+function dday(end){
+  if(!end) return {n:null, label:'상시 접수', cls:'badge-success'};
+  const d = new Date(end + 'T00:00:00');
+  const n = Math.round((d - today()) / 86400000);
+  if(n < 0)  return {n, label:'마감', cls:'badge-neutral'};
+  if(n === 0) return {n, label:'오늘 마감', cls:'badge-critical'};
+  if(n <= 3)  return {n, label:'D-' + n, cls:'badge-critical'};
+  if(n <= 7)  return {n, label:'D-' + n, cls:'badge-attention'};
+  return {n, label:'D-' + n, cls:'badge-neutral'};
+}
+const md = s => s ? (+s.slice(5,7)) + '/' + (+s.slice(8,10)) : '';
+
+async function boot(){
+  try {
+    const r = await fetch('./data.json?t=' + Date.now());
+    DATA = await r.json();
+  } catch (e) {
+    $('#list').innerHTML = '<div class="empty t-body">공고 데이터를 불러오지 못했습니다.<br>' +
+      '잠시 후 새로고침해 주세요.</div>';
+    return;
+  }
+  $('#updated').textContent = (DATA.updated || '').slice(0,10).replace(/-/g,'.') + ' 기준 · ' +
+    DATA.items.length + '건';
+
+  const srcs = [...new Set(DATA.items.map(i => i.source).filter(Boolean))];
+  $('#srcChips').innerHTML = srcs.map(s =>
+    '<button class="pill-tab" data-src="' + esc(s) + '">' + esc(s) + '</button>').join('');
+  document.querySelectorAll('[data-src]').forEach(b => b.onclick = () => {
+    b.classList.toggle('on');
+    srcFilter.has(b.dataset.src) ? srcFilter.delete(b.dataset.src) : srcFilter.add(b.dataset.src);
+    render();
+  });
+  document.querySelectorAll('[data-f]').forEach(b => b.onclick = () => {
+    quick = b.dataset.f;
+    document.querySelectorAll('[data-f]').forEach(x => x.classList.toggle('on', x === b));
+    render();
+  });
+  $('#q').oninput = render;
+  $('#sort').onchange = render;
+  calMonth = new Date(); calMonth.setDate(1);
+  render();
+}
+
+function visible(){
+  const q = $('#q').value.trim().toLowerCase();
+  return DATA.items.filter(it => {
+    if(srcFilter.size && !srcFilter.has(it.source)) return false;
+    if(quick === 'star' && !mine.star[it.k]) return false;
+    if(quick === 'new' && it.seen !== DATA.issue_key) return false;
+    const d = dday(it.end);
+    if(quick === 'soon' && !(d.n !== null && d.n >= 0 && d.n <= 7)) return false;
+    if(selDay && it.end !== selDay) return false;
+    if(q && !((it.title + ' ' + (it.org||'') + ' ' + (it.target||'') + ' ' + (it.source||''))
+        .toLowerCase().includes(q))) return false;
+    return true;
+  });
+}
+
+function render(){
+  const all = DATA.items;
+  $('#tTotal').textContent = all.length;
+  $('#tNew').textContent = all.filter(i => i.seen === DATA.issue_key).length;
+  $('#tSoon').textContent = all.filter(i => {
+    const n = dday(i.end).n; return n !== null && n >= 0 && n <= 7; }).length;
+  $('#tStar').textContent = Object.values(mine.star).filter(Boolean).length;
+
+  const items = visible();
+  const sort = $('#sort').value;
+  items.sort((a,b) =>
+    sort === 'org' ? (a.org||'').localeCompare(b.org||'') || (a.end||'9').localeCompare(b.end||'9')
+    : sort === 'new' ? (b.seen||'').localeCompare(a.seen||'')
+    : (a.end ? 0 : 1) - (b.end ? 0 : 1) || (a.end||'').localeCompare(b.end||''));
+
+  $('#count').textContent = items.length + '건'
+    + (items.length !== all.length ? ' / 전체 ' + all.length + '건' : '');
+  $('#list').innerHTML = items.length ? items.map(card).join('')
+    : '<div class="empty t-body">조건에 맞는 공고가 없습니다.<br>검색어나 필터를 바꿔보세요.</div>';
+  renderCal();
+}
+
+function card(it){
+  const d = dday(it.end);
+  const isNew = it.seen === DATA.issue_key;
+  const starred = !!mine.star[it.k];
+  const memo = mine.memo[it.k] || '';
+  const meta = [it.org, it.target, it.budget].filter(Boolean).join(' · ');
+  const period = it.start && it.end ? md(it.start) + ' ~ ' + md(it.end)
+    : it.end ? '~ ' + md(it.end) : '상시 접수';
+  const id = cid(it.k);
+  return '<article class="card" id="c-' + id + '">' +
+    '<div class="card-head">' +
+      '<h3 class="card-title t-sub-lg">' + esc(it.title) +
+        '<span class="badges"><span class="badge ' + d.cls + '">' + esc(d.label) + '</span>' +
+        (isNew ? '<span class="badge badge-promo">NEW</span>' : '') + '</span></h3>' +
+      '<button class="starbtn' + (starred ? ' on' : '') + '" aria-label="관심 표시"' +
+        ' onclick="toggleStar(\'' + id + '\')">' + (starred ? '★' : '☆') + '</button>' +
+    '</div>' +
+    '<p class="card-meta t-sm">' + esc(meta) + (meta ? ' · ' : '') + '신청 ' + esc(period) + '</p>' +
+    '<div class="acts">' +
+      '<a class="btn btn-primary" href="' + esc(it.link) + '" target="_blank" rel="noopener">공고 원문 보기</a>' +
+      '<button class="btn btn-ghost" onclick="toggleDet(\'' + id + '\')">상세 · 메모</button>' +
+    '</div>' +
+    '<div class="det" id="d-' + id + '" style="display:none">' +
+      (it.summary ? '<p class="lede t-sm">' + esc(it.summary) + '</p>' : '') +
+      spec('소관기관', it.org) + spec('지원대상', it.target) +
+      spec('신청기간', period) + spec('출처', it.source) +
+      '<textarea class="memo" placeholder="메모 (이 브라우저에만 저장됩니다)"' +
+        ' oninput="saveMemo(\'' + id + '\', this.value)">' + esc(memo) + '</textarea>' +
+      '<div class="saved" id="s-' + id + '"></div>' +
+    '</div></article>';
+}
+const spec = (k,v) => '<div class="spec"><div class="k">' + k + '</div><div class="v">' +
+  (esc(v) || '—') + '</div></div>';
+
+/* 키에 따옴표·특수문자가 섞여 있어 DOM id 로는 짧은 해시를 쓴다 */
+const IDS = {};
+function cid(k){
+  if(!IDS[k]){
+    let h = 0;
+    for(let i = 0; i < k.length; i++) h = (h * 31 + k.charCodeAt(i)) >>> 0;
+    IDS[k] = 'k' + h.toString(36);
+    IDS['k' + h.toString(36)] = k;
+  }
+  return IDS[k];
+}
+const keyOf = id => IDS[id];
+
+function toggleStar(id){
+  const k = keyOf(id);
+  mine.star[k] = !mine.star[k];
+  save();
+  /* 목록을 통째로 다시 그리면 펼쳐둔 상세와 쓰던 메모가 닫혀버린다.
+     '관심' 탭이 켜져 있어 목록 자체가 바뀔 때만 다시 그린다. */
+  if(quick === 'star'){ render(); return; }
+  const btn = document.querySelector('#c-' + id + ' .starbtn');
+  if(btn){
+    btn.classList.toggle('on', !!mine.star[k]);
+    btn.textContent = mine.star[k] ? '★' : '☆';
+  }
+  $('#tStar').textContent = Object.values(mine.star).filter(Boolean).length;
+}
+function toggleDet(id){
+  const el = document.getElementById('d-' + id);
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+let memoTimer;
+function saveMemo(id, v){
+  mine.memo[keyOf(id)] = v;
+  clearTimeout(memoTimer);
+  memoTimer = setTimeout(() => {
+    save();
+    const s = document.getElementById('s-' + id);
+    if(s){ s.textContent = '저장됨'; setTimeout(() => s.textContent = '', 1800); }
+  }, 400);
+}
+
+/* 마감 달력 */
+function moveMonth(n){ calMonth.setMonth(calMonth.getMonth() + n); render(); }
+function clearDay(){ selDay = null; render(); }
+function pickDay(iso){ selDay = (selDay === iso ? null : iso); render(); }
+function renderCal(){
+  const y = calMonth.getFullYear(), m = calMonth.getMonth();
+  $('#calLabel').textContent = y + '년 ' + (m + 1) + '월 마감';
+  $('#calClear').style.display = selDay ? '' : 'none';
+
+  const byDay = {};
+  for(const it of DATA.items){
+    if(!it.end) continue;
+    const d = new Date(it.end + 'T00:00:00');
+    if(d.getFullYear() === y && d.getMonth() === m) byDay[it.end] = (byDay[it.end] || 0) + 1;
+  }
+  const first = new Date(y, m, 1).getDay();
+  const last = new Date(y, m + 1, 0).getDate();
+  let html = ['일','월','화','수','목','금','토'].map(d => '<div class="dow">' + d + '</div>').join('');
+  for(let i = 0; i < first; i++) html += '<div class="day blank"></div>';
+  for(let day = 1; day <= last; day++){
+    const iso = y + '-' + String(m+1).padStart(2,'0') + '-' + String(day).padStart(2,'0');
+    const n = byDay[iso] || 0;
+    const cls = 'day' + (n ? ' has' : '') + (selDay === iso ? ' sel' : '');
+    html += '<div class="' + cls + '"' + (n ? ' onclick="pickDay(\'' + iso + '\')"' : '') + '>' +
+      '<div>' + day + '</div>' + (n ? '<div class="n">' + n + '</div>' : '') + '</div>';
+  }
+  $('#cal').innerHTML = html;
+}
+
+boot();
+</script>
+
+<script>
+(function(){
+  var b = document.getElementById('burger'), t = document.getElementById('navTabs');
+  if(!b || !t) return;
+  b.onclick = function(){
+    var open = t.classList.toggle('open');
+    b.setAttribute('aria-expanded', open ? 'true' : 'false');
+  };
+})();
+</script>
+</body>
+</html>

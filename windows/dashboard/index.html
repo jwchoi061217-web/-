@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>모두의러닝 주간 발송 관리</title>
+<style>
+:root{
+  --coral:#F9524E; --coral-dark:#c93b38; --navy:#16295C; --blue:#2457C5;
+  --bg:#f5f7fc; --card:#fff; --line:#e2e8f4; --muted:#8a97b0; --ink:#1a2b4c;
+  --ok:#1a9e6b; --warn:#e08600; --bad:#d0342c;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:'Malgun Gothic','Apple SD Gothic Neo','Noto Sans KR',sans-serif;font-size:14px}
+.wrap{max-width:1180px;margin:0 auto;padding:0 20px 60px}
+header{background:linear-gradient(120deg,var(--navy),var(--blue));color:#fff;padding:22px 0 18px;margin-bottom:20px}
+header .wrap{display:flex;align-items:center;gap:14px;padding-bottom:0}
+header h1{font-size:1.15rem;margin:0;font-weight:800}
+header .sub{font-size:.8rem;color:#c9d9f5}
+header .spacer{flex:1}
+button{font:inherit;cursor:pointer;border-radius:9px;border:1.5px solid var(--line);
+  background:#fff;color:var(--ink);padding:8px 14px;font-weight:700}
+button:hover{border-color:var(--blue);color:var(--blue)}
+button.primary{background:var(--coral);border-color:var(--coral);color:#fff}
+button.primary:hover{background:var(--coral-dark);border-color:var(--coral-dark);color:#fff}
+button.dark{background:var(--navy);border-color:var(--navy);color:#fff}
+button.dark:hover{background:#0f1c40;color:#fff}
+button:disabled{opacity:.5;cursor:not-allowed}
+button.sm{padding:5px 10px;font-size:.82rem}
+.tabs{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap}
+.tabs button{background:#fff}
+.tabs button.on{background:var(--navy);border-color:var(--navy);color:#fff}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin-bottom:16px}
+.card h2{font-size:.95rem;margin:0 0 14px;font-weight:800}
+.card h2 .hint{font-weight:600;color:var(--muted);font-size:.8rem;margin-left:8px}
+.grid{display:grid;gap:12px}
+.stats{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+.stat{background:var(--bg);border-radius:11px;padding:13px 15px}
+.stat .k{font-size:.76rem;color:var(--muted);font-weight:700}
+.stat .v{font-size:1.28rem;font-weight:800;margin-top:3px}
+.stat .v small{font-size:.8rem;font-weight:700;color:var(--muted)}
+table{width:100%;border-collapse:collapse}
+th,td{padding:9px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}
+th{font-size:.78rem;color:var(--muted);font-weight:800}
+input[type=text],select{font:inherit;padding:7px 9px;border:1.5px solid var(--line);
+  border-radius:8px;background:#fff;color:var(--ink);max-width:100%}
+input[type=number]{font:inherit;padding:7px 9px;border:1.5px solid var(--line);border-radius:8px;width:78px}
+input:focus,select:focus{outline:none;border-color:var(--blue)}
+label.ck{display:inline-flex;align-items:center;gap:5px;margin-right:12px;font-size:.85rem;white-space:nowrap}
+.pill{display:inline-block;font-size:.72rem;font-weight:800;padding:3px 9px;border-radius:20px}
+.pill.ok{background:#e6f6ef;color:var(--ok)}
+.pill.bad{background:#fdeceb;color:var(--bad)}
+.pill.wait{background:#eef1f8;color:var(--muted)}
+.pill.warn{background:#fff5e5;color:var(--warn)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.row.end{justify-content:flex-end}
+pre{background:#0f1c2e;color:#d7e3f5;border-radius:11px;padding:14px 16px;overflow:auto;
+  font-family:Consolas,'D2Coding',monospace;font-size:.8rem;line-height:1.55;max-height:340px;margin:0;
+  white-space:pre-wrap;word-break:break-word}
+.bubble{background:#fee9a0;border-radius:14px;padding:14px 16px;white-space:pre-wrap;
+  word-break:break-word;line-height:1.6;font-size:.88rem;margin-bottom:10px;max-width:560px}
+.bubble .meta{color:#7a6a2a;font-size:.75rem;font-weight:700;margin-bottom:8px}
+.muted{color:var(--muted)}
+.warnbox{background:#fff4f3;border:1px solid #ffd9d5;color:#a4302a;border-radius:11px;
+  padding:12px 14px;font-size:.84rem;line-height:1.6;margin-bottom:14px}
+.hide{display:none}
+a{color:var(--blue)}
+</style>
+</head>
+<body>
+<header><div class="wrap">
+  <div>
+    <h1>모두의러닝 주간 발송 관리</h1>
+    <div class="sub" id="hdrSub">불러오는 중…</div>
+  </div>
+  <div class="spacer"></div>
+  <button class="sm" onclick="load()">⟳ 새로고침</button>
+</div></header>
+
+<div class="wrap">
+  <div class="tabs" id="tabs"></div>
+
+  <!-- 현황 -->
+  <section data-tab="현황">
+    <div class="card">
+      <h2>이번주 발행<span class="hint" id="issueWhen"></span></h2>
+      <div class="grid stats" id="stats"></div>
+      <div id="govSrc" class="muted" style="margin-top:12px;font-size:.83rem"></div>
+      <div id="govErr"></div>
+      <div class="row" style="margin-top:14px">
+        <a id="pageLink" href="#" target="_blank" rel="noopener"><button class="sm">🔗 발행 페이지 열기</button></a>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>방별 발송 상태</h2>
+      <table><thead><tr><th>방 이름</th><th>보낼 내용</th><th>카톡 창</th><th>상태</th></tr></thead>
+      <tbody id="sendStatus"></tbody></table>
+      <div class="row" style="margin-top:16px">
+        <button class="primary" onclick="send({})">📤 지금 발송</button>
+        <button onclick="send({testOnly:true})">🧪 테스트방에만</button>
+        <button onclick="send({dryRun:true})">👀 대상만 확인 (전송 안 함)</button>
+        <button onclick="send({force:true})">↻ 이미 보낸 것도 다시</button>
+      </div>
+      <div class="muted" style="margin-top:10px;font-size:.82rem">
+        발송 중에는 카카오톡 창이 잠깐 앞으로 나옵니다. 그동안 키보드·마우스를 건드리지 마세요.
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>다음 실행 예정</h2>
+      <div class="grid stats" id="nextRuns"></div>
+    </div>
+  </section>
+
+  <!-- 방 관리 -->
+  <section data-tab="방 관리" class="hide">
+    <div class="card">
+      <h2>발송 대상 방<span class="hint">방 이름은 카카오톡 창 제목과 한 글자도 달라선 안 됩니다</span></h2>
+      <div class="warnbox" id="winWarn"></div>
+      <table><thead><tr>
+        <th style="width:34%">방 이름</th><th>보낼 내용</th><th style="width:12%">형식</th>
+        <th style="width:9%">사용</th><th style="width:9%">테스트</th><th style="width:6%"></th>
+      </tr></thead><tbody id="roomRows"></tbody></table>
+      <div class="row" style="margin-top:14px">
+        <select id="newRoom"></select>
+        <button onclick="addRoom()">＋ 방 추가</button>
+        <div class="spacer" style="flex:1"></div>
+        <button class="dark" onclick="saveRooms()">저장</button>
+      </div>
+      <div class="muted" style="margin-top:10px;font-size:.82rem">
+        저장하면 이 PC의 설정이 바로 바뀝니다. 저장소에도 남기려면 [소스·스케줄] 탭에서 커밋하세요.
+      </div>
+    </div>
+  </section>
+
+  <!-- 미리보기 -->
+  <section data-tab="미리보기" class="hide">
+    <div class="card">
+      <h2>실제로 나갈 메시지<span class="hint">지금 발송을 누르면 이 내용 그대로 전송됩니다</span></h2>
+      <div class="row" style="margin-bottom:14px">
+        <select id="previewRoom" onchange="renderPreview()"></select>
+      </div>
+      <div id="previewBox"></div>
+    </div>
+  </section>
+
+  <!-- 소스·스케줄 -->
+  <section data-tab="소스·스케줄" class="hide">
+    <div class="card">
+      <h2>공고 수집 소스</h2>
+      <table><thead><tr><th style="width:34%">소스</th><th style="width:12%">사용</th>
+        <th style="width:18%">최대 건수</th><th>비고</th></tr></thead>
+      <tbody id="srcRows"></tbody></table>
+      <div class="row end" style="margin-top:14px"><button class="dark" onclick="saveSources()">저장</button></div>
+    </div>
+
+    <div class="card">
+      <h2>발송 시각<span class="hint">이 PC의 작업 스케줄러 · 변경하려면 관리자 승인이 필요합니다</span></h2>
+      <div class="row">
+        <select id="sendDay"></select>
+        <input type="number" id="sendHour" min="0" max="23"> 시
+        <input type="number" id="sendMin" min="0" max="59"> 분
+        <button onclick="saveSchedule()">작업 등록 / 변경</button>
+      </div>
+      <div class="muted" style="margin-top:10px;font-size:.82rem">
+        PC가 꺼져 있어 정시에 못 보냈으면, 로그온 2분 뒤에 자동으로 따라잡아 발송합니다.
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>발행 시각<span class="hint">GitHub Actions · 페이지를 만드는 시각 (PC와 무관하게 항상 실행)</span></h2>
+      <div class="row">
+        <select id="pubDay"></select>
+        <input type="number" id="pubHour" min="0" max="23"> 시
+        <input type="number" id="pubMin" min="0" max="59"> 분
+        <button onclick="savePubCron()">워크플로 수정</button>
+        <span class="muted" id="cronNow"></span>
+      </div>
+      <div class="muted" style="margin-top:10px;font-size:.82rem">
+        수정 후 아래 [커밋]을 눌러야 실제로 반영됩니다.
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>저장소에 반영</h2>
+      <div class="row">
+        <input type="text" id="commitMsg" placeholder="커밋 메시지" style="flex:1;min-width:260px"
+               value="config: 발송 설정 변경">
+        <button class="dark" onclick="commit()">커밋 &amp; 푸시</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 이력 -->
+  <section data-tab="이력" class="hide">
+    <div class="card">
+      <h2>주차별 기록</h2>
+      <table><thead><tr><th>주차</th><th>수집 건수</th><th>발송 방</th><th>결과</th><th></th></tr></thead>
+      <tbody id="histRows"></tbody></table>
+    </div>
+  </section>
+
+  <!-- 로그 -->
+  <section data-tab="로그" class="hide">
+    <div class="card">
+      <h2>발송 로그<span class="hint">windows/send.log 최근 40줄</span></h2>
+      <pre id="logBox">—</pre>
+    </div>
+  </section>
+
+  <div class="card" id="outWrap" style="display:none">
+    <h2>실행 결과</h2>
+    <pre id="outBox"></pre>
+  </div>
+</div>
+
+<script>
+const CATS = {hrd:'HRD 뉴스', safety:'산업안전 뉴스', gov:'정부지원사업 공고'};
+const DAYS = ['월','화','수','목','금','토','일'];
+let S = null;
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c =>
+  ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+/* 탭 */
+const TABS = ['현황','방 관리','미리보기','소스·스케줄','이력','로그'];
+$('#tabs').innerHTML = TABS.map((t,i) =>
+  `<button class="${i===0?'on':''}" onclick="tab('${t}')">${t}</button>`).join('');
+function tab(name){
+  document.querySelectorAll('#tabs button').forEach(b =>
+    b.classList.toggle('on', b.textContent === name));
+  document.querySelectorAll('section[data-tab]').forEach(s =>
+    s.classList.toggle('hide', s.dataset.tab !== name));
+}
+
+/* 로딩 */
+async function load(){
+  const r = await fetch('/api/state');
+  S = await r.json();
+  render();
+}
+
+function render(){
+  const iss = S.issue || {};
+  $('#hdrSub').textContent = iss.issue_key
+    ? `${iss.issue_key} 발행본 · ${(S.rooms.rooms||[]).filter(r=>r.enabled).length}개 방 사용 중`
+    : '아직 발행된 주차가 없습니다 — 파이프라인을 먼저 실행하세요';
+  $('#issueWhen').textContent = iss.generated_at ? `생성 ${iss.generated_at}` : '';
+  $('#pageLink').href = iss.page_url || '#';
+
+  /* 통계 */
+  const counts = iss.counts || {};
+  $('#stats').innerHTML = Object.keys(CATS).map(c =>
+    `<div class="stat"><div class="k">${CATS[c]}</div>
+     <div class="v">${counts[c] ?? 0}<small> 건</small></div></div>`).join('')
+    + `<div class="stat"><div class="k">발송 대상 방</div>
+       <div class="v">${(iss.rooms||[]).length}<small> 개</small></div></div>`;
+
+  const gs = iss.gov_by_source || {};
+  $('#govSrc').textContent = Object.keys(gs).length
+    ? '공고 소스별 — ' + Object.entries(gs).map(([k,v]) => `${k} ${v}건`).join(' · ') : '';
+  $('#govErr').innerHTML = (iss.gov_errors||[]).length
+    ? `<div class="warnbox" style="margin:12px 0 0">⚠️ 수집 실패한 소스: ${esc(iss.gov_errors.join(', '))}</div>` : '';
+
+  /* 방별 발송 상태 */
+  const open = new Set(S.openWindows||[]);
+  $('#sendStatus').innerHTML = (iss.rooms||[]).length ? (iss.rooms||[]).map(r => {
+    const st = (S.sent||{})[r.room];
+    const pill = st === 'sent' ? '<span class="pill ok">발송 완료</span>'
+      : st ? `<span class="pill bad">${esc(st)}</span>` : '<span class="pill wait">미발송</span>';
+    const win = open.has(r.room) ? '<span class="pill ok">열림</span>'
+      : '<span class="pill bad">창 없음</span>';
+    return `<tr><td><b>${esc(r.room)}</b></td><td class="muted">메시지 ${r.messages.length}건 ·
+      ${r.messages.reduce((a,m)=>a+m.length,0)}자</td><td>${win}</td><td>${pill}</td></tr>`;
+  }).join('') : '<tr><td colspan="4" class="muted">발송 대상이 없습니다 — [방 관리]에서 방을 추가하세요.</td></tr>';
+
+  /* 다음 실행 */
+  const t = S.task || {};
+  const lastResult = t.result === 0 ? '<span class="pill ok">정상</span>'
+    : (t.result === undefined || t.result === null) ? ''
+    : `<span class="pill bad">코드 ${t.result}</span>`;
+  $('#nextRuns').innerHTML = `
+    <div class="stat"><div class="k">발행 (GitHub Actions)</div>
+      <div class="v" style="font-size:.95rem">${esc(cronKo(S.publishCron))}</div></div>
+    <div class="stat"><div class="k">발송 (이 PC 스케줄러)</div>
+      <div class="v" style="font-size:.95rem">${t.exists ? esc(t.next || '예정 없음') : '작업 미등록'}</div></div>
+    <div class="stat"><div class="k">마지막 발송 실행</div>
+      <div class="v" style="font-size:.95rem">${t.exists ? esc(t.last || '없음') : '—'} ${lastResult}</div></div>`;
+
+  renderRooms(); renderSources(); renderSchedule(); renderPreviewList(); renderHistory();
+  $('#logBox').textContent = S.log || '아직 발송 기록이 없습니다.';
+}
+
+function cronKo(c){
+  if(!c) return '설정 없음';
+  const p = c.split(' ');
+  if(p.length < 5) return c;
+  const min = +p[0], hUtc = +p[1], dUtc = +p[4];
+  let hK = hUtc + 9, dK = dUtc;
+  if(hK >= 24){ hK -= 24; dK = (dUtc + 1) % 7; }
+  return `매주 ${DAYS[(dK+6)%7]} ${String(hK).padStart(2,'0')}:${String(min).padStart(2,'0')}`;
+}
+
+/* 방 관리 */
+function renderRooms(){
+  const rooms = (S.rooms.rooms) || [];
+  const open = S.openWindows || [];
+  $('#winWarn').innerHTML = open.length
+    ? `현재 열려 있는 카카오톡 채팅창 <b>${open.length}개</b>를 목록에서 고를 수 있습니다.`
+    : '⚠️ 열려 있는 카카오톡 채팅창이 없습니다. 카카오톡에서 보낼 단톡방을 <b>더블클릭해 별도 창으로 열어두세요.</b> 창이 닫혀 있으면 발송할 수 없습니다.';
+  $('#winWarn').style.background = open.length ? '#eef6ff' : '';
+  $('#winWarn').style.borderColor = open.length ? '#cfe0f5' : '';
+  $('#winWarn').style.color = open.length ? '#2457C5' : '';
+
+  $('#roomRows').innerHTML = rooms.map((r,i) => {
+    const isOpen = open.includes(r.name);
+    return `<tr>
+      <td><input type="text" value="${esc(r.name)}" onchange="setRoom(${i},'name',this.value)"
+           style="width:100%">
+        ${isOpen ? '<span class="pill ok" style="margin-top:5px">창 열림</span>'
+                 : '<span class="pill bad" style="margin-top:5px">창 없음</span>'}</td>
+      <td>${Object.keys(CATS).map(c => `<label class="ck"><input type="checkbox"
+          ${(r.categories||[]).includes(c)?'checked':''}
+          onchange="toggleCat(${i},'${c}',this.checked)">${CATS[c]}</label>`).join('')}</td>
+      <td><select onchange="setRoom(${i},'style',this.value)">
+          <option value="compact" ${r.style!=='full'?'selected':''}>요약</option>
+          <option value="full" ${r.style==='full'?'selected':''}>전체</option></select></td>
+      <td><input type="checkbox" ${r.enabled?'checked':''} onchange="setRoom(${i},'enabled',this.checked)"></td>
+      <td><input type="checkbox" ${r.test?'checked':''} onchange="setRoom(${i},'test',this.checked)"></td>
+      <td><button class="sm" onclick="delRoom(${i})">✕</button></td></tr>`;
+  }).join('') || '<tr><td colspan="6" class="muted">등록된 방이 없습니다.</td></tr>';
+
+  const used = new Set(rooms.map(r => r.name));
+  const avail = open.filter(w => !used.has(w));
+  $('#newRoom').innerHTML = avail.length
+    ? avail.map(w => `<option>${esc(w)}</option>`).join('')
+    : '<option value="">추가할 수 있는 열린 창이 없습니다</option>';
+}
+function setRoom(i,k,v){ S.rooms.rooms[i][k]=v; if(k==='name') renderRooms(); }
+function toggleCat(i,c,on){
+  const r = S.rooms.rooms[i]; r.categories = r.categories || [];
+  if(on && !r.categories.includes(c)) r.categories.push(c);
+  if(!on) r.categories = r.categories.filter(x => x !== c);
+}
+function delRoom(i){ S.rooms.rooms.splice(i,1); renderRooms(); }
+function addRoom(){
+  const name = $('#newRoom').value;
+  if(!name) return alert('카카오톡에서 보낼 단톡방을 별도 창으로 먼저 열어주세요.');
+  S.rooms.rooms.push({name, categories:['gov'], style:'compact', enabled:true, test:false});
+  renderRooms();
+}
+async function saveRooms(){
+  await post('/api/rooms', S.rooms);
+  out('방 설정을 저장했습니다. 다음 발행부터 반영됩니다.\n(이번 주 메시지에 반영하려면 파이프라인을 다시 실행하세요.)');
+  load();
+}
+
+/* 소스 */
+function renderSources(){
+  const src = (S.sources||{}).sources || {};
+  $('#srcRows').innerHTML = Object.entries(src).map(([k,v]) => `
+    <tr><td><b>${esc(v.label||k)}</b> <span class="muted">${k}</span></td>
+      <td><input type="checkbox" ${v.enabled?'checked':''} onchange="setSrc('${k}','enabled',this.checked)"></td>
+      <td><input type="number" value="${v.max_items??300}" style="width:90px"
+          onchange="setSrc('${k}','max_items',+this.value)"></td>
+      <td>${k==='g2b' ? `금액 하한선 <input type="number" value="${v.min_budget??0}" style="width:130px"
+            onchange="setSrc('${k}','min_budget',+this.value)"> 원
+            <span class="muted">— 첫 실행 후 실제 건수를 보고 조정하세요</span>` : '<span class="muted">필터 없음 (전부 수집)</span>'}</td>
+    </tr>`).join('');
+}
+function setSrc(k,f,v){ S.sources.sources[k][f]=v; }
+async function saveSources(){ await post('/api/sources', S.sources); out('공고 소스 설정을 저장했습니다.'); }
+
+/* 스케줄 */
+function renderSchedule(){
+  ['#sendDay','#pubDay'].forEach(sel => {
+    if($(sel).options.length) return;
+    $(sel).innerHTML = DAYS.map((d,i) => `<option value="${i+1}">${d}요일</option>`).join('');
+  });
+  const t = S.task || {};
+  let d=1,h=8,m=5;
+  const start = (t.triggers||[]).map(x=>x.start).find(Boolean);
+  if(start){ const dt=new Date(start); if(!isNaN(dt)){ h=dt.getHours(); m=dt.getMinutes(); } }
+  $('#sendDay').value=d; $('#sendHour').value=h; $('#sendMin').value=m;
+
+  const c = (S.publishCron||'').split(' ');
+  let pd=1,ph=8,pm=0;
+  if(c.length>=5){ pm=+c[0]; let hK=+c[1]+9, dK=+c[4];
+    if(hK>=24){ hK-=24; dK=(dK+1)%7; } ph=hK; pd=dK===0?7:dK; }
+  $('#pubDay').value=pd; $('#pubHour').value=ph; $('#pubMin').value=pm;
+  $('#cronNow').textContent = `현재: ${cronKo(S.publishCron)}`;
+}
+async function saveSchedule(){
+  if(!confirm('작업 스케줄러를 변경합니다. 관리자 권한 창이 뜨면 승인해 주세요.')) return;
+  out('관리자 승인을 기다리는 중…');
+  const r = await post('/api/schedule', {weekday:+$('#sendDay').value,
+    hour:+$('#sendHour').value, minute:+$('#sendMin').value});
+  out(r.output || '완료'); load();
+}
+async function savePubCron(){
+  const r = await post('/api/publish-cron', {weekday:+$('#pubDay').value,
+    hour:+$('#pubHour').value, minute:+$('#pubMin').value});
+  out(`워크플로 cron을 "${r.cron}" 로 바꿨습니다.\n아래 [커밋 & 푸시]를 눌러야 실제로 반영됩니다.`);
+  load();
+}
+async function commit(){
+  out('커밋 중…');
+  const r = await post('/api/commit', {message:$('#commitMsg').value});
+  out(r.output || (r.ok ? '완료' : '실패'));
+}
+
+/* 미리보기 */
+function renderPreviewList(){
+  const rooms = (S.issue||{}).rooms || [];
+  $('#previewRoom').innerHTML = rooms.length
+    ? rooms.map((r,i) => `<option value="${i}">${esc(r.room)}</option>`).join('')
+    : '<option value="">발행된 메시지가 없습니다</option>';
+  renderPreview();
+}
+function renderPreview(){
+  const rooms = (S.issue||{}).rooms || [];
+  const r = rooms[+$('#previewRoom').value];
+  if(!r){ $('#previewBox').innerHTML = '<div class="muted">먼저 파이프라인을 실행해 이번 주 메시지를 만들어 주세요.</div>'; return; }
+  $('#previewBox').innerHTML = r.messages.map((m,i) =>
+    `<div class="bubble"><div class="meta">메시지 ${i+1}/${r.messages.length} · ${m.length}자</div>${esc(m)}</div>`).join('');
+}
+
+/* 이력 */
+function renderHistory(){
+  const h = S.history || [];
+  $('#histRows').innerHTML = h.length ? h.map(x => {
+    const cnt = Object.entries(x.counts||{}).map(([k,v]) => `${CATS[k]||k} ${v}`).join(' · ') || '—';
+    const st = Object.entries(x.sent||{});
+    const res = st.length ? st.map(([room,v]) =>
+      v === 'sent' ? `<span class="pill ok">${esc(room)}</span>`
+                   : `<span class="pill bad">${esc(room)}</span>`).join(' ')
+      : '<span class="pill wait">발송 기록 없음</span>';
+    return `<tr><td><b>${esc(x.issue_key)}</b></td><td class="muted">${esc(cnt)}</td>
+      <td class="muted">${x.rooms.length}개</td><td>${res}</td>
+      <td><a href="${esc(x.page_url)}" target="_blank" rel="noopener">열기</a></td></tr>`;
+  }).join('') : '<tr><td colspan="5" class="muted">기록이 없습니다.</td></tr>';
+}
+
+/* 공통 */
+async function post(url, body){
+  const r = await fetch(url, {method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(body||{})});
+  return r.json();
+}
+async function send(opts){
+  const label = opts.dryRun ? '대상 확인' : '발송';
+  if(!opts.dryRun && !confirm(`카카오톡으로 ${label}합니다.\n진행 중에는 키보드·마우스를 건드리지 마세요.\n계속할까요?`)) return;
+  out(`${label} 중…`);
+  const r = await post('/api/send', opts);
+  out(r.output || (r.ok ? '완료' : '실패'));
+  load();
+}
+function out(text){
+  $('#outWrap').style.display = 'block';
+  $('#outBox').textContent = text;
+  $('#outWrap').scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+load();
+setInterval(() => { if(!document.hidden) load(); }, 60000);
+</script>
+</body>
+</html>

@@ -2,3 +2,8 @@
 __pycache__/
 *.pyc
 .DS_Store
+
+# 이 PC에서만 의미 있는 발송 상태·로그 (저장소에 올리지 않는다)
+windows/sent_state.json
+windows/send.log
+*.tmp
