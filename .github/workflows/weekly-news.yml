@@ -1,0 +1,50 @@
+name: weekly-news
+
+on:
+  schedule:
+    - cron: "0 23 * * 0" # 일 23:00 UTC = 월 08:00 KST
+  workflow_dispatch:
+    inputs:
+      mock:
+        description: "fixtures 데이터로 실행 (API 키 불필요)"
+        type: boolean
+        default: false
+
+concurrency:
+  group: weekly-news
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - uses: actions/cache@v4
+        with:
+          path: .fonts
+          key: noto-fonts-v1
+
+      - run: pip install -r requirements.txt
+
+      - name: Run pipeline
+        run: python -m src.main ${{ inputs.mock == true && '--mock' || '' }}
+        env:
+          NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID }}
+          NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
+          PAGES_BASE_URL: https://jwchoi061217-web.github.io/-
+
+      - name: Commit outputs
+        run: |
+          git config user.name "modu-news-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add docs/
+          git diff --cached --quiet || git commit -m "news: $(date -u -d '+9 hours' +%F) 주간 뉴스 발행"
+          git push
