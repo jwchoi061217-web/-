@@ -7,3 +7,7 @@ __pycache__/
 windows/sent_state.json
 windows/send.log
 *.tmp
+
+# API 키. 절대 커밋하지 않는다 — 실제 키는 GitHub Secrets 에만 둔다.
+# 로컬 검증(tools/check_keys.py)용으로만 쓰고, 형식 예시는 .env.example 에 있다.
+.env
