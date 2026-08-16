@@ -1,0 +1,10 @@
+{
+  "_설명": "BNI 맥스 체크인 페이지 설정. gas_url 은 GAS 웹앱 배포 후 채운다 (bni-attendance/SETUP.md 참고). 시간·요일 값은 표시용이며 판정은 서버(Code.gs CONFIG)가 한다 — 두 곳의 값을 항상 일치시킬 것.",
+  "gas_url": "",
+  "chapter_name": "BNI 맥스",
+  "meeting_weekday": 3,
+  "_meeting_weekday_설명": "0=일 1=월 2=화 3=수 4=목 5=금 6=토",
+  "window_start": "06:20",
+  "window_end": "07:40",
+  "late_after": "07:00"
+}
