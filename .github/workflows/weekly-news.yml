@@ -1,12 +1,18 @@
 name: weekly-publish
 
+# 정기 실행(schedule)은 꺼 두었다 — 수집은 사무실 PC의 작업 스케줄러
+# '모두의뉴스_수집'(windows/run_collect.ps1)이 매주 월요일에 맡는다.
+#   · Secrets 가 하나도 등록되지 않아 8주 연속 실패했다.
+#   · PC 와 Actions 가 같은 주에 둘 다 수집하면 docs/ 가 서로 어긋나 push 가 충돌한다.
+# Secrets 를 등록하고 Actions 로 되돌리려면 아래 schedule 주석을 풀고
+# PC 쪽 작업은 해제한다(둘 중 하나만).
 on:
-  schedule:
-    - cron: "0 23 * * 0" # 일 23:00 UTC = 월 08:00 KST
+  # schedule:
+  #   - cron: "0 23 * * 0" # 일 23:00 UTC = 월 08:00 KST
   workflow_dispatch:
     inputs:
       mock:
-        description: "fixtures 데이터로 실행 (API 키 불필요)"
+        description: "fixtures 데이터로 실행 (API 키 불필요, docs 는 바뀌지 않음)"
         type: boolean
         default: false
 
@@ -42,9 +48,10 @@ jobs:
           BIZINFO_KEY: ${{ secrets.BIZINFO_KEY }}
           DATA_GO_KR_KEY: ${{ secrets.DATA_GO_KR_KEY }}
           PAGES_BASE_URL: https://jwchoi061217-web.github.io/-
+          PYTHONIOENCODING: utf-8
 
-      # docs/ 에는 발행물과 함께 docs/state/seen_gov.json(이미 내보낸 공고 기록)이 들어간다.
-      # 이 파일이 커밋되어야 다음 주에 같은 공고가 또 올라가지 않는다.
+      # docs/ 에는 발행물과 함께 docs/state/seen_gov.json(이미 내보낸 공고 기록)과
+      # docs/gov/archive.json(아카이브)이 들어간다. 커밋되어야 다음 주로 이어진다.
       - name: Commit outputs
         run: |
           git config user.name "modu-news-bot"

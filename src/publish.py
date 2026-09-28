@@ -10,7 +10,7 @@
   issues/<date>/payload.json      발송 데이터 (아카이브)
   latest/payload.json             발송기가 읽는 고정 경로
 
-디자인은 theme.py(Meta 커머스 시스템)를 따른다 — 공고 대시보드(/gov/)와 같은
+디자인은 theme.py(모두의교육그룹 BI)를 따른다 — 공고 대시보드(/gov/)와 같은
 토큰·네비·푸터를 쓰므로 두 화면이 한 시스템으로 보인다.
 """
 import html as html_mod
@@ -33,7 +33,7 @@ SOON_DAYS = 7
 GOV_OPEN_PER_SOURCE = 10
 
 EXTRA_CSS = """
-.num{display:inline-block;min-width:34px;color:var(--yellow);font-size:15px;font-weight:800}
+.num{display:inline-block;min-width:34px;color:var(--navy);font-size:15px;font-weight:800}
 .srcgrp{display:flex;align-items:baseline;gap:var(--s-xs);
   color:var(--brown);margin:var(--s-lg) 0 var(--s-sm);
   font-size:14px;font-weight:800}
@@ -178,7 +178,8 @@ def _list_page(issue_date: date, items_by_cat: dict, cats: list, active: str,
     body = (theme.PROMO_BANNER
             + theme.topnav(_tabs(all_cats), active)
             + '<div class="wrap">'
-            + f'<header class="hero"><h1 class="t-hero">{esc(title)}</h1><hr class="rule">'
+            + f'<header class="hero"><div class="kicker">Weekly Briefing</div>'
+            + f'<h1 class="t-hero">{esc(title)}</h1>'
             + f'<p class="lede t-sub-md">{lede}</p>'
             + f'<p class="stamp">{fmt_date_ko(issue_date)} 발행</p></header>'
             + "\n".join(sections)

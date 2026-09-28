@@ -10,12 +10,31 @@
 ## 구조
 
 ```
-발행  GitHub Actions (월 08:00 KST) → docs/ 커밋 → Pages
-발송  이 PC 작업 스케줄러 (월 08:05 + 로그온 catch-up) → windows/kakao_send.py
+수집  이 PC 작업 스케줄러 '모두의뉴스_수집' (월 08:00 + 로그온 catch-up)
+      → windows/run_collect.ps1 → python -m src.main → docs/ 갱신
+공개  docs/ 를 GitHub Desktop 으로 Push → Pages
+발송  이 PC 작업 스케줄러 (월 08:05 + 로그온 catch-up) → windows/kakao_send.py  ※ 미등록
 ```
 
-발행과 발송을 나눈 이유: 월요일 아침에 PC가 켜져 있다는 보장이 없다.
-페이지는 무조건 만들어지고 발송만 늦어진다.
+2026-09-28 에 수집 주체를 GitHub Actions → 이 PC 로 옮겼다. Secrets 가 하나도 없어
+Actions 가 8주 연속 실패했기 때문이다. workflow 의 schedule 은 주석 처리돼 있고
+수동 실행(workflow_dispatch)만 남아 있다. **PC 와 Actions 를 동시에 켜지 말 것** —
+둘 다 docs/ 를 고쳐 push 가 충돌한다.
+
+PC 가 월요일에 꺼져 있었으면 다음 로그온 때 따라잡는다. 같은 주에는 한 번만 수집한다
+(`windows/collect_state.json`). 로그는 `windows/collect.log`.
+
+## 키워드와 아카이브
+
+- 키워드는 `config/gov_sources.json` 의 `keywords.include / exclude`. 고치면 다음 수집부터 반영.
+  영문 키워드(AI·DX)는 단어 경계로, 한글은 부분 일치로 본다. 기관명은 매칭에서 뺐다.
+- `docs/gov/archive.json` 은 **지우지 않는 누적본**(마감 공고 포함),
+  `docs/gov/archive/<날짜>.json` 은 주차 스냅샷. `data.json` 은 진행 중만.
+- 대시보드는 `data.js`(archive 와 같은 내용)를 `<script>` 로 읽는다 —
+  `fetch()` 는 file:// 에서 막혀 로컬에서 열면 목록이 비기 때문.
+- `--mock` 은 임시 폴더에 쓴다. 실제 아카이브에 fixtures 를 섞지 말 것.
+- 기업마당은 `BIZINFO_KEY` 가 없으면 공개 목록 페이지에서 수집한다(robots.txt 허용 경로, 0.5초 간격).
+  K-Startup 목록 페이지는 robots.txt 가 막고 있어 API 키 없이는 수집하지 않는다.
 
 | 파일 | 역할 |
 |---|---|
@@ -62,11 +81,14 @@ powershell -ExecutionPolicy Bypass -File windows\start_dashboard.ps1
 **모두의교육그룹 BI** 적용. 출처는 브랜딩북 29p
 (`C:\Users\user\Downloads\work\presentations\one-brand-bi`).
 
-- 선라이트 옐로우 `#FDB515` · 그라운드 브라운 `#545046` · 인사이트 네이비 `#003362`
-- Neutral `#F5F5F5 #EAE8E8 #C2C2C2 #7A7A7A #111111`
-- 시그니처 장치: 라벨 아래 짧은 옐로우 룰(24px) — 브랜딩북이 전 페이지에서 쓰는 장치
-- 로고 마크(2×2: 라운드 사각·ㄷ자·원·재생 삼각형)를 인라인 SVG와 PIL로 재현
+2026-09-28 부터 `modu-bi` 스킬(html-kit) 기준을 따른다.
+
+- 선라이트 옐로우 `#FDB515` · 인사이트 네이비 `#003362` · 딥네이비 `#00234A` · 그라운드 브라운 `#545046`
+- 다크 네이비 그라데이션 히어로 + 옐로우 ▶ 키커, Pretendard, 카드 radius 20px
+- 공식 로고는 `assets/brand/*.png` 를 base64 임베드 (밝은 배경 light / 네이비 dark)
+- 옐로우는 글자색으로 쓰지 않는다. 옐로우 배경 위 글자는 딥네이비
 - 마감 임박 색은 BI에 없어 그룹 패밀리인 모두세이프티 오렌지 `#FF5F1B`를 차용 (D-3 이하)
+- 카톡 썸네일(`src/thumbnail.py`)은 아직 예전 흰 바탕 디자인이다
 
 색·타입·네비·푸터는 **`src/theme.py` 한 곳**에서 바꾸면 전 페이지에 반영된다.
 
@@ -77,10 +99,13 @@ powershell -ExecutionPolicy Bypass -File windows\start_dashboard.ps1
 
 ## 남은 작업
 
-- 저장소 Secrets 미등록: `NAVER_CLIENT_ID` `NAVER_CLIENT_SECRET` `BIZINFO_KEY` `DATA_GO_KR_KEY`
-  → ⚠️ **네이버 키가 없으면 월요일 자동 실행이 통째로 실패한다** (`collect.py`가 환경변수를 필수로 읽음)
+- **공개 사이트 반영**: GitHub Desktop 에서 Commit → Push origin. 수집은 로컬 docs/ 만 고치므로
+  공개 페이지를 최신으로 유지하려면 매주 Push 가 필요하다.
+- API 키 미등록(`.env`): `DATA_GO_KR_KEY`(K-Startup·나라장터) `BIZINFO_KEY` `NAVER_CLIENT_ID/SECRET`.
+  없어도 돌아가지만 K-Startup·나라장터 공고와 뉴스는 빠진다. 넣은 뒤 `python tools/check_keys.py`.
 - `config/rooms.json` 에 실제 단톡방 미지정 (대시보드에서 창 목록으로 선택)
 - 작업 스케줄러 `모두의뉴스_발송` 미등록
+- `C:\Users\user\카카오톡단톡방관리` 는 이 저장소의 8월 5일자 복제본. 이쪽(modu-news)이 본체다.
 - 나라장터 `min_budget`(기본 5천만원)은 임시값 — 실 키로 첫 실행 후 건수 보고 조정
 - 공고 API 응답 필드명은 별칭 목록(`_first`)으로 방어해 뒀지만 실 키로 받아본 뒤 정리 필요
 

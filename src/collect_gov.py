@@ -6,6 +6,20 @@
   g2b       조달청 나라장터 용역 입찰공고 DATA_GO_KR_KEY (금액 하한선 필터)
   moel      고용노동부 알려드립니다 RSS   (인증 불필요)
 
+  기업마당은 BIZINFO_KEY 가 없으면 공개 목록 페이지로 대신 수집한다(public_fallback).
+  키 없이도 매주 수집이 돌아가게 하기 위한 장치다 — 키 4개가 전부 미등록인 채로
+  월요일 실행이 8주 연속 실패한 전례가 있다.
+
+키워드 필터 (config/gov_sources.json 의 keywords)
+  include 중 하나라도 제목·분야·대상·개요에 있으면 통과, exclude 가 제목에 있으면 제외.
+
+저장소
+  docs/gov/data.json      진행 중인 공고 (마감되면 빠진다)
+  docs/gov/archive.json   아카이브 — 한 번 수집한 공고는 마감 뒤에도 지우지 않는다
+  docs/gov/archive/<발행일>.json   그 주 신규 공고 스냅샷
+  docs/gov/data.js        대시보드가 읽는 파일. archive.json 과 같은 내용을 <script> 로
+                          불러올 수 있게 감싼 것 — fetch() 는 file:// 에서 막히기 때문이다.
+
 정규화 스키마 (뉴스 항목과 달리 신청 정보가 핵심)
   title  link  source  org  target  budget  summary
   period_start  period_end   ISO 날짜 문자열 또는 None
@@ -34,12 +48,21 @@ STATE_PATH = os.path.join(ROOT, "docs", "state", "seen_gov.json")
 # 진행 중인 공고 누적 저장소 (공개 대시보드가 읽는다).
 # 주차 페이지는 '이번 주 신규'만 싣지만, 대시보드는 아직 마감 안 된 공고를 전부 보여준다.
 STORE_PATH = os.path.join(ROOT, "docs", "gov", "data.json")
+ARCHIVE_NAME = "archive.json"
+DATA_JS_NAME = "data.js"
+SNAPSHOT_DIR = "archive"
 
 BIZINFO_URL = "https://www.bizinfo.go.kr/uss/rss/bizinfoApi.do"
 BIZINFO_HOST = "https://www.bizinfo.go.kr"
 # 기업마당 공고 상세 주소. 예전 형식(/web/lay1/bbs/S1T122C128/AS/74/view.do)은
 # 현재 이 주소로 리다이렉트되는데, 리다이렉트에 기대지 않고 공고 ID로 직접 만든다.
 BIZINFO_DETAIL = BIZINFO_HOST + "/sii/siia/selectSIIA200Detail.do?pblancId={}"
+# 키 없이 읽는 공개 목록 (robots.txt 허용 경로). 한 페이지 15건 고정, 등록일 최신순.
+BIZINFO_LIST = BIZINFO_HOST + "/web/lay1/bbs/S1T122C128/AS/74/list.do"
+BIZINFO_LIST_MAX_PAGES = 120
+BIZINFO_DETAIL_MAX = 80        # 개요를 읽으러 상세 페이지에 들어가는 최대 건수
+PUBLIC_DELAY = 0.5             # 공개 페이지 요청 간격(초) — 서버에 부담을 주지 않는다
+PUBLIC_UA = "Mozilla/5.0 (compatible; modu-news weekly collector; +https://modulearning.kr)"
 KSTARTUP_URL = "https://apis.data.go.kr/B552735/kisedKstartupService01/getAnnouncementInformation01"
 G2B_URL = "https://apis.data.go.kr/1230000/ad/BidPublicInfoService/getBidPblancListInfoServc"
 MOEL_RSS_URL = "https://www.moel.go.kr/rss/notice.do"
@@ -49,14 +72,21 @@ SEEN_KEEP_DAYS = 180
 
 DEFAULT_CONFIG = {
     "days": 7,
+    "keywords": {"include": [], "exclude": []},
     "sources": {
-        "bizinfo": {"enabled": True, "label": "기업마당", "max_items": 300},
+        "bizinfo": {"enabled": True, "label": "기업마당", "max_items": 300,
+                    "public_fallback": True},
         "kstartup": {"enabled": True, "label": "K-Startup", "max_items": 300},
         "g2b": {"enabled": True, "label": "나라장터(용역)", "max_items": 300,
                 "min_budget": 50000000},
         "moel": {"enabled": True, "label": "고용노동부", "max_items": 100},
     },
 }
+
+
+class MissingKey(RuntimeError):
+    """API 키 미등록. 수집 실패(장애)와 구분한다 — 키가 없는 것은 매주 똑같은 상태라
+    발행물에 '수집 실패' 경고로 매번 띄울 일이 아니다."""
 
 
 # ── 공통 유틸 ────────────────────────────────────────────────────────────
@@ -67,6 +97,9 @@ def load_config(path: str = CONFIG_PATH) -> dict:
         with open(path, encoding="utf-8") as f:
             user = json.load(f)
         cfg["days"] = user.get("days", cfg["days"])
+        kw = user.get("keywords") or {}
+        cfg["keywords"] = {"include": [k for k in kw.get("include", []) if k],
+                           "exclude": [k for k in kw.get("exclude", []) if k]}
         for name, over in (user.get("sources") or {}).items():
             cfg["sources"].setdefault(name, {}).update(over)
     return cfg
@@ -194,12 +227,123 @@ def _fmt_won(v) -> str:
     return f"{n:,}원"
 
 
+# ── 키워드 필터 ──────────────────────────────────────────────────────────
+
+def _kw_hit(kw: str, text: str) -> bool:
+    """영문·숫자 키워드는 단어 경계를 본다 — 'AI' 가 'MAIN', 'DX' 가 'INDEX' 에 걸리면 안 된다.
+    한글 키워드는 부분 일치('교육' → '직무교육')."""
+    if re.fullmatch(r"[A-Za-z0-9 .+-]+", kw):
+        return re.search(r"(?<![A-Za-z0-9])" + re.escape(kw) + r"(?![A-Za-z0-9])",
+                         text, re.I) is not None
+    return kw.lower() in text.lower()
+
+
+def match_keywords(item: dict, keywords: dict) -> list:
+    """걸린 include 키워드 목록. 빈 목록이면 탈락.
+    include 설정이 비어 있으면 필터를 끈 것으로 보고 ['*'] 를 돌려준다."""
+    title = item.get("title") or ""
+    if any(_kw_hit(x, title) for x in keywords.get("exclude") or []):
+        return []
+    include = keywords.get("include") or []
+    if not include:
+        return ["*"]
+    # 기관명은 보지 않는다 — '고용' 이 '고용노동부' 에 걸려 그 부처 공지가 전부 통과한다
+    text = " ".join(str(item.get(f) or "") for f in
+                    ("title", "field", "target", "summary"))
+    return [k for k in include if _kw_hit(k, text)]
+
+
+# ── 기업마당 공개 목록 (키가 없을 때) ────────────────────────────────────
+
+def _get_html(url: str, params: dict = None, timeout: int = 25) -> str:
+    for attempt in range(3):
+        try:
+            resp = requests.get(url, params=params, timeout=timeout,
+                                headers={"User-Agent": PUBLIC_UA})
+            resp.raise_for_status()
+            resp.encoding = "utf-8"
+            return resp.text
+        except requests.RequestException:
+            if attempt == 2:
+                raise
+            time.sleep(2 * (attempt + 1))
+    return ""
+
+
+def parse_bizinfo_list(html: str, label: str) -> list:
+    """목록 표 한 페이지 → 정규화 항목.
+    열 순서: 번호 · 지원분야 · 지원사업명 · 신청기간 · 소관부처 · 사업수행기관 · 등록일 · 조회수"""
+    m = re.search(r"<tbody[^>]*>(.*?)</tbody>", html, re.S)
+    if not m:
+        return []
+    out = []
+    for row in re.findall(r"<tr[^>]*>(.*?)</tr>", m.group(1), re.S):
+        tds = [_clean(t) for t in re.findall(r"<td[^>]*>(.*?)</td>", row, re.S)]
+        pid = re.search(r"pblancId=(PBLN_\d+)", row)
+        if len(tds) < 7 or not pid:
+            continue
+        # '예산 소진시까지' '상시 접수' 처럼 날짜가 아닌 신청기간은 마감일 없음으로 둔다
+        start, end = split_period(tds[3]) if re.search(r"\d{4}", tds[3]) else (None, None)
+        out.append({
+            "title": tds[2],
+            "link": BIZINFO_DETAIL.format(pid.group(1)),
+            "source": label,
+            "org": " · ".join(x for x in (tds[4], tds[5]) if x),
+            "field": tds[1],
+            "target": "",
+            "budget": "",
+            "summary": "" if (start or end) else tds[3],
+            "period_start": start,
+            "period_end": end,
+            "pubdate_iso": parse_date(tds[6]),
+        })
+    return out
+
+
+def parse_bizinfo_summary(html: str) -> str:
+    """상세 페이지의 '사업개요' 본문."""
+    m = re.search(r"사업개요(.*?)(?:사업신청\s*방법|문의처|<div class=\"modal)", html, re.S)
+    return _clean(m.group(1))[:400] if m else ""
+
+
+def fetch_bizinfo_public(cfg: dict, label: str, now: datetime, keywords: dict) -> list:
+    """등록일 최신순 목록을 기간(days) 안쪽까지만 넘겨 읽는다.
+
+    목록에는 개요가 없어 키워드는 제목·분야·기관으로 먼저 거르고,
+    통과한 공고만 상세 페이지에서 개요를 읽어 온다(요청 수를 줄이기 위해)."""
+    cutoff = (now - timedelta(days=cfg.get("days", 7))).date().isoformat()
+    out = []
+    for page in range(1, BIZINFO_LIST_MAX_PAGES + 1):
+        rows = parse_bizinfo_list(_get_html(BIZINFO_LIST, {"rows": 15, "cpage": page}), label)
+        if not rows:
+            break
+        out.extend(r for r in rows if (r["pubdate_iso"] or "9") >= cutoff)
+        if all((r["pubdate_iso"] or "9") < cutoff for r in rows):
+            break
+        time.sleep(PUBLIC_DELAY)
+    print(f"[gov] {label}: 공개 목록에서 {len(out)}건 읽음 (API 키 없음 → 대체 수집)",
+          file=sys.stderr)
+
+    matched = [it for it in out if match_keywords(it, keywords)]
+    known = {it.get("k") for it in load_archive()["items"]}
+    todo = [it for it in matched if _key(it) not in known][:BIZINFO_DETAIL_MAX]
+    for it in todo:
+        try:
+            it["summary"] = parse_bizinfo_summary(_get_html(it["link"])) or it["summary"]
+        except requests.RequestException:
+            pass  # 개요는 없어도 된다 — 공고 자체를 버리지 않는다
+        time.sleep(PUBLIC_DELAY)
+    return matched[:cfg.get("max_items", 300)]
+
+
 # ── 소스별 어댑터 ────────────────────────────────────────────────────────
 
-def fetch_bizinfo(cfg: dict, label: str) -> list:
+def fetch_bizinfo(cfg: dict, label: str, now: datetime = None, keywords: dict = None) -> list:
     key = os.environ.get("BIZINFO_KEY")
     if not key:
-        raise RuntimeError("BIZINFO_KEY 환경변수가 없습니다 (기업마당 인증키)")
+        if cfg.get("public_fallback", True):
+            return fetch_bizinfo_public(cfg, label, now or datetime.now(KST), keywords or {})
+        raise MissingKey("BIZINFO_KEY 환경변수가 없습니다 (기업마당 인증키)")
     out, page, per = [], 1, 100
     while len(out) < cfg.get("max_items", 300):
         payload = _get_json(BIZINFO_URL, {
@@ -222,6 +366,7 @@ def fetch_bizinfo(cfg: dict, label: str) -> list:
                 "link": link,
                 "source": label,
                 "org": _clean(_first(r, "jrsdInsttNm", "excInsttNm", "organ")),
+                "field": _clean(_first(r, "pldirSportRealmLclasCodeNm", "sportRealmNm", "category")),
                 "target": _clean(_first(r, "trgetNm", "target")),
                 "budget": "",
                 "summary": _clean(_first(r, "bsnsSumryCn", "description", "pblancCn"))[:400],
@@ -238,7 +383,7 @@ def fetch_bizinfo(cfg: dict, label: str) -> list:
 def fetch_kstartup(cfg: dict, label: str) -> list:
     key = os.environ.get("DATA_GO_KR_KEY")
     if not key:
-        raise RuntimeError("DATA_GO_KR_KEY 환경변수가 없습니다 (공공데이터포털 인증키)")
+        raise MissingKey("DATA_GO_KR_KEY 환경변수가 없습니다 (공공데이터포털 인증키)")
     out, page, per = [], 1, 100
     while len(out) < cfg.get("max_items", 300):
         payload = _get_json(KSTARTUP_URL, {
@@ -273,7 +418,7 @@ def fetch_g2b(cfg: dict, label: str, now: datetime) -> list:
     """나라장터 용역 입찰공고. 물량이 매우 크므로 금액 하한선으로 줄인다."""
     key = os.environ.get("DATA_GO_KR_KEY")
     if not key:
-        raise RuntimeError("DATA_GO_KR_KEY 환경변수가 없습니다 (공공데이터포털 인증키)")
+        raise MissingKey("DATA_GO_KR_KEY 환경변수가 없습니다 (공공데이터포털 인증키)")
     min_budget = cfg.get("min_budget", 0) or 0
     days = cfg.get("days", 7)
     bgn = (now - timedelta(days=days)).strftime("%Y%m%d") + "0000"
@@ -351,10 +496,10 @@ def fetch_moel(cfg: dict, label: str) -> list:
 
 
 FETCHERS = {
-    "bizinfo": lambda cfg, label, now: fetch_bizinfo(cfg, label),
-    "kstartup": lambda cfg, label, now: fetch_kstartup(cfg, label),
-    "g2b": fetch_g2b,
-    "moel": lambda cfg, label, now: fetch_moel(cfg, label),
+    "bizinfo": lambda cfg, label, now, kw: fetch_bizinfo(cfg, label, now, kw),
+    "kstartup": lambda cfg, label, now, kw: fetch_kstartup(cfg, label),
+    "g2b": lambda cfg, label, now, kw: fetch_g2b(cfg, label, now),
+    "moel": lambda cfg, label, now, kw: fetch_moel(cfg, label),
 }
 
 
@@ -408,7 +553,51 @@ def load_store(path: str = STORE_PATH) -> dict:
     return data
 
 
-def update_store(items: list, today: date, issue_key: str, path: str = STORE_PATH) -> list:
+def load_archive(gov_dir: str = None) -> dict:
+    return load_store(os.path.join(gov_dir or os.path.dirname(STORE_PATH), ARCHIVE_NAME))
+
+
+def _atomic_write(path: str, text: str) -> None:
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        f.write(text)
+    os.replace(tmp, path)
+
+
+def write_archive(current: list, issue_key: str, gov_dir: str, keywords: dict = None) -> list:
+    """아카이브(archive.json)에 합치고, 대시보드용 data.js 와 주차 스냅샷을 쓴다.
+
+    data.json 은 마감된 공고를 걷어내지만 아카이브는 지우지 않는다 —
+    '작년 이맘때 어떤 사업이 떴었나'를 다시 찾아볼 수 있어야 하기 때문이다."""
+    by_key = {it["k"]: it for it in load_archive(gov_dir)["items"] if it.get("k")}
+    for it in current:
+        by_key[it["k"]] = it
+    items = sorted(by_key.values(),
+                   key=lambda it: (it.get("seen") or "", it.get("end") or "9"), reverse=True)
+
+    doc = {
+        "updated": datetime.now(KST).isoformat(timespec="seconds"),
+        "issue_key": issue_key,
+        "keywords": (keywords or {}).get("include") or [],
+        "items": items,
+    }
+    body = json.dumps(doc, ensure_ascii=False, separators=(",", ":"))
+    _atomic_write(os.path.join(gov_dir, ARCHIVE_NAME), body)
+    # 공고 제목에 </script> 가 섞여 들어와도 태그가 닫히지 않게 한다
+    _atomic_write(os.path.join(gov_dir, DATA_JS_NAME),
+                  "window.GOV_DATA=" + body.replace("</", "<\\/") + ";\n")
+
+    fresh = [it for it in items if it.get("seen") == issue_key]
+    _atomic_write(os.path.join(gov_dir, SNAPSHOT_DIR, issue_key + ".json"),
+                  json.dumps({"issue_key": issue_key, "keywords": doc["keywords"],
+                              "items": fresh}, ensure_ascii=False, indent=1))
+    print(f"[gov] 아카이브: 누적 {len(items)}건 (이번 주 {len(fresh)}건)", file=sys.stderr)
+    return items
+
+
+def update_store(items: list, today: date, issue_key: str, path: str = STORE_PATH,
+                 keywords: dict = None) -> list:
     """이번 실행에서 본 공고를 누적 저장소에 합치고, 마감된 것을 걷어낸다.
 
     매 실행은 최근 며칠치만 가져오므로 3주 전에 뜬 '아직 안 끝난' 공고는
@@ -429,12 +618,17 @@ def update_store(items: list, today: date, issue_key: str, path: str = STORE_PAT
             "org": it.get("org", ""),
             "target": it.get("target", ""),
             "budget": it.get("budget", ""),
-            "summary": it.get("summary", ""),
+            "summary": it.get("summary") or (prev or {}).get("summary", ""),
+            "field": it.get("field", ""),
+            "kw": it.get("kw") or [],
             "start": it.get("period_start"),
             "end": it.get("period_end"),
             # 처음 본 날짜는 유지한다 — '이번 주 신규' 판정 기준이다
             "seen": (prev or {}).get("seen") or issue_key,
         }
+
+    # 아카이브는 마감 여부와 상관없이 전부 남긴다 (마감분을 걷어내기 전에 먼저 쓴다)
+    write_archive(list(by_key.values()), issue_key, os.path.dirname(path), keywords)
 
     today_iso = today.isoformat()
     stale = (today - timedelta(days=SEEN_KEEP_DAYS)).isoformat()
@@ -480,6 +674,7 @@ def collect(mock_dir: str = None, now: datetime = None, config: dict = None,
     today = now.date()
     cfg = config or load_config()
     days = cfg.get("days", 7)
+    keywords = cfg.get("keywords") or {}
 
     raw, errors = [], []
     for name, scfg in cfg["sources"].items():
@@ -497,15 +692,27 @@ def collect(mock_dir: str = None, now: datetime = None, config: dict = None,
                 for it in items:
                     it.setdefault("source", label)
             else:
-                items = FETCHERS[name](scfg, label, now)
+                items = FETCHERS[name](scfg, label, now, keywords)
             print(f"[gov] {label}: {len(items)}건 수집", file=sys.stderr)
             raw.extend(items)
+        except MissingKey as e:
+            print(f"[gov] {label} 건너뜀: {e}", file=sys.stderr)
         except Exception as e:  # 소스 하나가 죽어도 발행은 계속한다
             print(f"[gov] {label} 수집 실패: {e}", file=sys.stderr)
             errors.append(label)
 
+    # 키워드 필터 — 걸린 키워드를 항목에 남겨 대시보드에서 키워드별로 볼 수 있게 한다
+    matched = []
+    for it in raw:
+        it["kw"] = match_keywords(it, keywords)
+        if it["kw"]:
+            matched.append(it)
+    print(f"[gov] 키워드 필터: {len(raw)}건 → {len(matched)}건 "
+          f"(키워드 {len(keywords.get('include') or [])}개)", file=sys.stderr)
+
     # 마감 지난 공고 제외
-    alive = [it for it in raw if not (it.get("period_end") and it["period_end"] < today.isoformat())]
+    alive = [it for it in matched
+             if not (it.get("period_end") and it["period_end"] < today.isoformat())]
 
     # 이번 실행 안에서의 중복 제거 (같은 공고가 여러 소스에 뜨는 경우 포함)
     seen_keys, seen_titles, unique = set(), set(), []
@@ -532,5 +739,5 @@ def collect(mock_dir: str = None, now: datetime = None, config: dict = None,
     print(f"[gov] 수집 {len(raw)}건 → 유효 {len(alive)}건 → 중복제거 {len(unique)}건 "
           f"→ 신규 {len(fresh)}건 (최근 {days}일 기준)", file=sys.stderr)
 
-    active = update_store(unique, today, issue_key or today.isoformat(), store_path)
+    active = update_store(unique, today, issue_key or today.isoformat(), store_path, keywords)
     return fresh, errors, active
