@@ -1,17 +1,14 @@
 {
   "issue_key": "2026-09-28",
-  "generated_at": "2026-09-28T15:18:21+09:00",
+  "generated_at": "2026-09-28T16:18:00+09:00",
   "page_url": "https://jwchoi061217-web.github.io/-/issues/2026-09-28/",
   "rooms": [],
   "counts": {
-    "gov": 89
+    "gov": 12
   },
   "gov_by_source": {
-    "기업마당": 84,
-    "고용노동부": 5
+    "기업마당": 11,
+    "고용노동부": 1
   },
-  "gov_errors": [
-    "K-Startup",
-    "나라장터(용역)"
-  ]
+  "gov_errors": []
 }
