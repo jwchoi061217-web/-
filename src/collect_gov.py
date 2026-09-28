@@ -85,8 +85,55 @@ DEFAULT_CONFIG = {
 
 
 class MissingKey(RuntimeError):
-    """API 키 미등록. 수집 실패(장애)와 구분한다 — 키가 없는 것은 매주 똑같은 상태라
-    발행물에 '수집 실패' 경고로 매번 띄울 일이 아니다."""
+    """API 키 미등록. 정상적인 검색 결과 0건과 구분한다."""
+
+
+class APIResponseError(RuntimeError):
+    """공공 API가 반환한 오류. 인증키나 요청 URL을 오류 문구에 넣지 않는다."""
+
+
+def _api_failure(code) -> None:
+    # 제공기관이 키를 오류 메시지에 되돌려줄 수 있으므로 원문은 기록하지 않는다.
+    safe_code = str(code).strip()
+    if not re.fullmatch(r"-?\d{1,5}", safe_code):
+        safe_code = "UNKNOWN"
+    raise APIResponseError(f"공공 API 오류 (코드 {safe_code}) — 인증·활용신청·조회조건을 확인하세요")
+
+
+def validate_api_payload(payload) -> None:
+    """HTTP 200 안에 담긴 공공데이터포털 오류를 정상 빈 목록과 구분한다."""
+    if not isinstance(payload, dict):
+        return
+    envelopes = [payload]
+    for key in ("response", "Response"):
+        if isinstance(payload.get(key), dict):
+            envelopes.append(payload[key])
+    for envelope in envelopes:
+        header = envelope.get("header")
+        candidates = [envelope, header] if isinstance(header, dict) else [envelope]
+        for part in candidates:
+            code = part.get("resultCode")
+            if code is not None and str(code).strip() not in ("0", "00", "0000", "200"):
+                _api_failure(code)
+    # K-Startup의 odcloud 형식 오류 응답: {code: -4, msg: ...}.
+    code = payload.get("code")
+    if code is not None and str(code).strip() not in ("0", "00", "200"):
+        _api_failure(code)
+
+
+def _check_xml_api_error(text: str) -> None:
+    if not text.lstrip().startswith("<"):
+        return
+    try:
+        root = ET.fromstring(text)
+    except ET.ParseError:
+        return
+    values = {el.tag.rsplit("}", 1)[-1]: (el.text or "").strip() for el in root.iter()}
+    code = values.get("returnReasonCode") or values.get("resultCode")
+    if code and code not in ("0", "00", "0000", "200"):
+        _api_failure(code)
+    if values.get("returnAuthMsg") or values.get("errMsg"):
+        _api_failure(code or "UNKNOWN")
 
 
 # ── 공통 유틸 ────────────────────────────────────────────────────────────
@@ -171,11 +218,16 @@ def _get_json(url: str, params: dict, timeout: int = 20) -> dict:
     for attempt in range(3):
         try:
             resp = requests.get(url, params=params, timeout=timeout)
+            _check_xml_api_error(resp.text)
             resp.raise_for_status()
-            return resp.json()
-        except (requests.RequestException, ValueError):
+            payload = resp.json()
+            validate_api_payload(payload)
+            return payload
+        except (requests.RequestException, ValueError) as exc:
             if attempt == 2:
-                raise
+                status = getattr(getattr(exc, "response", None), "status_code", None)
+                reason = f"HTTP {status}" if status else ("JSON 응답 형식 오류" if isinstance(exc, ValueError) else "네트워크 연결 오류")
+                raise APIResponseError(f"공공 API 요청 실패 ({reason})") from None
             time.sleep(2 * (attempt + 1))
     return {}
 
@@ -191,7 +243,7 @@ def _rows(payload) -> list:
         if isinstance(v, list):
             return v
         if isinstance(v, dict):
-            return _rows(v)
+            return _rows(v) or ([v] if key == "item" and v else [])
     for key in ("response", "body", "result", "Response"):
         v = payload.get(key)
         if isinstance(v, (dict, list)):
@@ -387,7 +439,7 @@ def fetch_kstartup(cfg: dict, label: str) -> list:
     out, page, per = [], 1, 100
     while len(out) < cfg.get("max_items", 300):
         payload = _get_json(KSTARTUP_URL, {
-            "serviceKey": key, "pageNo": page, "numOfRows": per, "returnType": "json",
+            "serviceKey": key, "page": page, "perPage": per, "returnType": "json",
         })
         rows = _rows(payload)
         if not rows:
@@ -438,7 +490,9 @@ def fetch_g2b(cfg: dict, label: str, now: datetime) -> list:
             title = _clean(_first(r, "bidNtceNm", "title"))
             if not title:
                 continue
-            amount = _to_int(_first(r, "presmptPrce", "asignBdgtAmt", "bdgtAmt"))
+            # 추정가격 우선. 미제공/0이면 배정예산으로 금액 하한선을 판단한다.
+            amount = (_to_int(r.get("presmptPrce")) or _to_int(r.get("asignBdgtAmt"))
+                      or _to_int(r.get("bdgtAmt")))
             if min_budget and (amount or 0) < min_budget:
                 dropped += 1
                 continue
@@ -697,6 +751,7 @@ def collect(mock_dir: str = None, now: datetime = None, config: dict = None,
             raw.extend(items)
         except MissingKey as e:
             print(f"[gov] {label} 건너뜀: {e}", file=sys.stderr)
+            errors.append(label)
         except Exception as e:  # 소스 하나가 죽어도 발행은 계속한다
             print(f"[gov] {label} 수집 실패: {e}", file=sys.stderr)
             errors.append(label)

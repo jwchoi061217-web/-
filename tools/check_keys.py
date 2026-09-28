@@ -10,7 +10,8 @@
   '인코딩 키'와 '디코딩 키' 두 가지를 주는데 인코딩 키를 넣으면 이중 인코딩되어
   SERVICE_KEY_IS_NOT_REGISTERED_ERROR 가 나온다 — 키 자체는 멀쩡한데도.
 
-각 소스를 1페이지·소량만 호출하고, 실패하면 응답 원문 앞부분을 그대로 보여준다.
+각 소스를 1페이지·소량만 호출한다. 공공데이터포털 오류는 키가 섞일 수 있어
+응답 원문 대신 오류 종류만 보여준다.
 공공 API 는 HTTP 200 에 에러를 실어 보내는 경우가 많아 상태코드만 봐서는 알 수 없다.
 """
 import json
@@ -47,6 +48,7 @@ _force_utf8_console()
 
 from src.collect_gov import (  # noqa: E402
     BIZINFO_URL, KSTARTUP_URL, G2B_URL, MOEL_RSS_URL,
+    APIResponseError, validate_api_payload, _rows,
 )
 
 KST = timezone(timedelta(hours=9))
@@ -119,39 +121,16 @@ def datago_diagnose(resp) -> str:
             return f"{code} — {msg}"
     m = re.search(r"<returnAuthMsg>([^<]+)</returnAuthMsg>", t)
     if m:
-        return m.group(1)
+        return "공공 API 인증 오류 — 활용신청과 키 설정을 확인하세요"
     m = re.search(r"<resultMsg>([^<]+)</resultMsg>", t)
     if m:
-        return m.group(1)
+        return "공공 API XML 응답 — 인증 상태와 응답 형식을 확인하세요"
     return ""
 
 
 def count_rows(payload) -> int:
-    """응답 구조가 소스마다 달라 흔한 경로를 훑는다."""
-    if isinstance(payload, list):
-        return len(payload)
-    if not isinstance(payload, dict):
-        return 0
-    for path in (
-        ("response", "body", "items", "item"),
-        ("response", "body", "items"),
-        ("body", "items"),
-        ("jsonArray",),
-        ("items",),
-        ("data",),
-        ("result",),
-    ):
-        cur = payload
-        for k in path:
-            if not isinstance(cur, dict) or k not in cur:
-                cur = None
-                break
-            cur = cur[k]
-        if isinstance(cur, list):
-            return len(cur)
-        if isinstance(cur, dict):
-            return 1
-    return 0
+    """수집기와 같은 방식으로 중첩 응답의 실제 항목 수를 센다."""
+    return len(_rows(payload))
 
 
 # ── 소스별 점검 ──────────────────────────────────────────────────────────
@@ -195,17 +174,21 @@ def _check_datago(name, url, params, key) -> tuple:
         warn = "⚠️ 키에 %XX 가 보입니다 — '인코딩 키'를 넣은 것 같습니다. '디코딩 키'를 쓰세요"
     try:
         resp = requests.get(url, params={**params, "serviceKey": key}, timeout=TIMEOUT)
-    except requests.RequestException as e:
-        return FAIL, f"연결 실패: {e}", warn
+    except requests.RequestException:
+        return FAIL, "API 연결 실패 (네트워크 또는 서버 상태 확인)", warn
     diag = datago_diagnose(resp)
     if diag:
-        return FAIL, diag, warn or body_head(resp, 200)
+        return FAIL, diag, warn
     if resp.status_code != 200:
-        return FAIL, f"HTTP {resp.status_code}", body_head(resp, 200)
+        return FAIL, f"HTTP {resp.status_code}", warn
     try:
         payload = resp.json()
     except ValueError:
-        return FAIL, "JSON 이 아닌 응답 (보통 인증 오류 XML)", body_head(resp, 200)
+        return FAIL, "JSON 이 아닌 응답 (보통 인증 오류 XML)", warn
+    try:
+        validate_api_payload(payload)
+    except APIResponseError as e:
+        return FAIL, str(e), warn
     n = count_rows(payload)
     if n == 0:
         return OK, "인증 통과 · 결과 0건 (기간 내 공고가 없을 수 있음)", ""
@@ -215,7 +198,7 @@ def _check_datago(name, url, params, key) -> tuple:
 def check_kstartup() -> tuple:
     return _check_datago(
         "K-Startup", KSTARTUP_URL,
-        {"pageNo": 1, "numOfRows": 3, "returnType": "json"},
+        {"page": 1, "perPage": 3, "returnType": "json"},
         os.environ.get("DATA_GO_KR_KEY"),
     )
 
