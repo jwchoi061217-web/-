@@ -48,6 +48,21 @@ if ($code -eq 0) {
     @{ week = $week; ran_at = (Get-Date -Format 's') } | ConvertTo-Json |
         Out-File -FilePath $stateFile -Encoding utf8
     Write-Log '수집 완료'
+
+    # 공개 사이트(GitHub Pages)에 반영한다. docs/ 만 올린다.
+    # 창 없이 도는 작업이라 로그인 창을 띄우면 그대로 멈춘다 - 물어보지 말고 실패하게 한다.
+    # 올리지 못해도 수집은 성공이다. 다음 주 실행 때 밀린 것까지 함께 올라간다.
+    $env:GCM_INTERACTIVE = 'never'
+    $env:GIT_TERMINAL_PROMPT = '0'
+    cmd /c "git add docs >> `"$log`" 2>&1"
+    cmd /c "git diff --cached --quiet"
+    if ($LASTEXITCODE -ne 0) {
+        cmd /c "git commit -q -m `"publish: $week weekly`" >> `"$log`" 2>&1"
+    }
+    cmd /c "git push origin main >> `"$log`" 2>&1"
+    if ($LASTEXITCODE -eq 0) { Write-Log '공개 사이트 반영 완료' }
+    else { Write-Log '[경고] 공개 사이트 반영 실패 - GitHub 로그인 상태를 확인하세요' }
+    $code = 0
 } else {
     Write-Log "[실패] 종료 코드 $code - 다음 로그온 때 다시 시도합니다"
 }
