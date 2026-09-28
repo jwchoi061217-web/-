@@ -10,7 +10,7 @@
   왼쪽 기둥   키워드 · 출처 · 마감 달력 (스크롤해도 따라온다)
   오른쪽      한 줄에 공고 하나인 표. 마감 구간별로 묶어 보여준다.
               줄을 누르면 그 자리에서 개요·메모가 펼쳐진다.
-  탭          진행 중 · 마감 임박 · 이번주 신규 · 관심 · 아카이브(마감 포함)
+  탭          전체 공고 · 마감 임박 · 최근 수집 · 관심 공고 · 수집 기록
 
 데이터는 HTML에 박지 않고 같은 폴더의 data.js 를 <script> 로 불러온다.
   · 공고가 수백 건이 될 수 있어 HTML이 비대해지는 것을 막는다.
@@ -28,7 +28,7 @@
 import os
 import shutil
 
-from . import theme
+from . import theme, gov_footer
 
 EXTRA_CSS = r"""
 [hidden]{display:none!important}
@@ -188,20 +188,72 @@ EXTRA_CSS = r"""
 }
 """
 
-BODY = r"""__PROMO_BANNER__
+EXTRA_CSS += r"""
+/* Dashboard usability: compact rows, reachable filters and visible controls. */
+.skip-link{position:fixed;left:16px;top:-80px;z-index:100;background:var(--navy);color:white;padding:12px 18px}
+.skip-link:focus{top:8px}
+button,input,select,textarea{font-family:inherit}
+button:focus-visible,a:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid #3475ac;outline-offset:3px}
+.dash-head{padding:24px;gap:24px;margin:24px 0}
+.dash-head h1{font-size:25px;margin:6px 0}
+.intro{font-size:14px;margin:0 0 10px;color:#e1ebf6}
+.dash-head .stamp{font-weight:400;color:#c2d3e4}
+.stats{flex-basis:520px;grid-template-columns:repeat(4,minmax(0,1fr))}
+.stat{min-height:76px}.stat .k{color:#d6e3ef}
+.nav-inner{gap:18px}.nav-tabs{gap:4px}.pill-tab{padding:10px 13px}
+.search-pill{width:260px;min-height:44px;border:1px solid var(--n-100)}
+.side{top:90px}.fitem{min-height:36px}.filter-hint{font-size:12px;color:#667282;line-height:1.5;margin:0 0 10px}
+.filter-toggle{display:none}.results-heading{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin:0 0 12px}
+.results-heading h2{font-size:18px;margin:0}.results-heading p{font-size:12px;color:#626d7a;margin:0}
+#results{scroll-margin-top:90px;min-width:0}#results:focus{outline:none}
+.toolbar{margin-bottom:12px}.sortsel{height:40px}.reset-filters{min-height:36px;padding:6px 10px;border:1px solid #c8d1db;border-radius:6px;background:#fff;color:var(--navy);cursor:pointer;font-size:12px}
+.active-f{margin-bottom:12px}.active-f button{min-height:34px;overflow-wrap:anywhere}
+.cols{grid-template-columns:36px 78px minmax(0,1fr) 156px 48px 92px 94px 16px;gap:10px}
+.row{min-height:66px}.row .ti{background:none;border:0;color:inherit;text-align:left;cursor:pointer;font:inherit;font-size:14px;font-weight:700;line-height:1.5;display:block;padding:12px 0;width:100%}
+.row .ti .tx{white-space:normal;display:inline;overflow-wrap:anywhere}.row .ti .new{display:inline-block;margin-right:5px;vertical-align:1px;font-size:10px}
+.row .ell{font-size:12px;color:#586576}.row .per{font-size:12px}.row .kwt{font-size:11px}.row-chevron{color:#5b7290;font-size:20px}.star{width:36px;height:40px;font-size:22px;color:#718093}.star.on{color:var(--navy)}
+.thead{height:38px}.new{background:#e8eef4;color:var(--navy)}
+.cal .day{border:0;font-family:inherit}.calhead button{width:32px;height:32px}
+.det{padding:18px 24px 20px 60px}.memo-label{font-size:13px;font-weight:700;color:var(--navy)}.memo-hint{font-size:12px;color:#626d7a;margin:4px 0 8px}
+.pagination{display:flex;align-items:center;justify-content:center;gap:20px;margin:20px 0 12px;font-size:13px;color:#566474}
+.pagination button{min-height:44px;min-width:64px;border:1px solid #c8d1db;border-radius:8px;background:#fff;color:var(--navy);font-size:13px;cursor:pointer}.pagination button:disabled{opacity:.4;cursor:default}
+.list-note{color:#687586;font-size:12px;margin:14px 0;line-height:1.6}.save-notice{background:#fff5dc;color:#5d4700;padding:12px 16px;margin-bottom:16px;border-radius:8px;font-size:13px}
+.empty{padding:44px 20px;line-height:2}.empty button{margin-top:12px}
+@media(max-width:1250px){.cols{grid-template-columns:36px 78px minmax(0,1fr) 150px 92px 16px}.c-field,.c-kw{display:none}.nav-right{flex:1}.search-pill{width:100%}}
+@media(max-width:960px){
+ .topnav{position:static}.nav-inner{flex-wrap:wrap;padding:16px;gap:14px}.wordmark .logo{height:26px;width:auto}.nav-right{flex:1 1 240px}.hamburger{display:none!important}
+ .nav-tabs{display:flex!important;order:3;flex:1 1 100%;padding:0;flex-wrap:wrap;gap:6px}.pill-tab{min-height:42px}
+ .layout{grid-template-columns:1fr}.side{display:none;order:0;grid-template-columns:1fr 1fr}.side.expanded{display:grid}.side .box.kw{grid-column:1/-1}
+ .filter-toggle{display:flex;align-items:center;gap:10px;width:100%;background:#fff;border:1px solid #c8d1db;border-radius:8px;min-height:46px;padding:10px 14px;text-align:left;color:var(--navy);font-weight:700;margin-bottom:14px;cursor:pointer}
+ .filter-toggle span:last-child{margin-left:auto;font-size:20px}.filter-toggle[aria-expanded=true] span:last-child{transform:rotate(45deg)}#filterCount{font-size:12px;font-weight:500}
+ #results{scroll-margin-top:16px}.dash-head .ttl{flex-basis:100%}.dash-head{gap:16px}.stats{flex-basis:100%}
+}
+@media(max-width:640px){
+ .wrap{padding:0 16px 20px}.nav-inner{gap:12px}.nav-right{order:2;flex:1 1 100%;margin:0}.search-pill{height:44px;border-radius:8px}.nav-tabs{gap:5px}.pill-tab{font-size:12px;padding:9px 11px}
+ .dash-head{margin:14px 0 18px;padding:20px;border-radius:14px}.dash-head h1{font-size:22px;line-height:1.4}.intro{font-size:13px;line-height:1.6}.dash-head .stamp{font-size:11px}.stats{grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}.stat{padding:10px 6px;min-height:66px;text-align:center}.stat .v{font-size:22px}.stat .v small{font-size:10px}.stat .k{font-size:10px;white-space:nowrap}
+ .side{grid-template-columns:1fr}.results-heading{gap:5px}.results-heading h2{font-size:17px}.results-heading p{width:100%;line-height:1.5}.toolbar{gap:6px}.toolbar .count{font-size:13px}.sortsel{max-width:150px;font-size:12px}
+ .cols{grid-template-columns:36px 76px minmax(0,1fr) 16px;gap:4px 8px;padding:12px}.thead{display:none}.row{align-items:start}.row .star{grid-column:1;grid-row:1/3}.row>span:nth-child(2){grid-column:2/4;grid-row:1}.row-chevron{grid-column:4;grid-row:1}.row .ti{grid-column:2/5;grid-row:2;padding:0;font-size:14px;line-height:1.55}.row .sub{display:block;margin-top:6px;padding:0;font-size:11px;line-height:1.5;color:#637080}.c-org,.c-per,.c-field,.c-kw{display:none}.dd{font-size:11px;padding:2px 8px;min-width:58px}.det{padding:16px}.pagination{gap:14px}
+ .fitem{min-height:44px}.active-f button{min-height:40px}.box h2 .clr{min-height:32px}.cal .day{height:36px}
+}
+@media(max-width:359px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.stat{text-align:left;padding:10px 14px}.stat .k{font-size:11px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important}}
+
+"""
+
+BODY = r"""<a class="skip-link" href="#results">공고 목록으로 바로가기</a>
 
 <nav class="topnav">
   <div class="nav-inner">
     <a class="wordmark" href="./">__LOGO__</a>
-    <div class="nav-tabs" id="navTabs">
-      <button class="pill-tab on" data-f="all">진행 중</button>
+    <div class="nav-tabs" id="navTabs" aria-label="공고 보기">
+      <button class="pill-tab on" data-f="all" aria-pressed="true">전체 공고</button>
       <button class="pill-tab" data-f="soon">마감 임박</button>
-      <button class="pill-tab" data-f="new">이번주 신규</button>
-      <button class="pill-tab" data-f="star">관심</button>
-      <button class="pill-tab" data-f="archive">아카이브</button>
+      <button class="pill-tab" data-f="new">최근 수집</button>
+      <button class="pill-tab" data-f="star">관심 공고</button>
+      <button class="pill-tab" data-f="archive">수집 기록</button>
     </div>
     <div class="nav-right">
-      <input class="search-pill" type="search" id="q" placeholder="공고·기관·개요 검색">
+      <input class="search-pill" type="search" id="q" placeholder="공고명, 기관, 키워드 검색" aria-label="공고 검색">
     </div>
     <button class="hamburger" id="burger" aria-label="메뉴" aria-expanded="false">☰</button>
   </div>
@@ -211,22 +263,25 @@ BODY = r"""__PROMO_BANNER__
   <header class="dash-head">
     <div class="ttl">
       <div class="kicker">Government Support</div>
-      <h1>정부지원사업 아카이브</h1>
+      <h1>정부지원사업 모아보기</h1>
+      <p class="intro">마감일을 확인하고, 필요한 공고를 관심 목록에 모아보세요.</p>
       <p class="stamp" id="updated">불러오는 중…</p>
     </div>
     <div class="stats">
-      <button class="stat" data-go="all"><div class="v" id="tTotal">–</div><div class="k">진행 중</div></button>
-      <button class="stat" data-go="new"><div class="v" id="tNew">–</div><div class="k">이번주 신규</div></button>
+      <button class="stat" data-go="all"><div class="v" id="tTotal">–</div><div class="k">전체 공고</div></button>
+      <button class="stat" data-go="new"><div class="v" id="tNew">–</div><div class="k">최근 수집</div></button>
       <button class="stat is-hot" data-go="soon"><div class="v" id="tSoon">–</div><div class="k">7일 내 마감</div></button>
-      <button class="stat" data-go="archive"><div class="v" id="tArch">–</div><div class="k">아카이브 누적</div></button>
+      <button class="stat" data-go="star"><div class="v" id="tStar">–</div><div class="k">관심 공고</div></button>
     </div>
   </header>
 
+  <div id="saveNotice" class="save-notice" role="status" hidden></div>
+  <button class="filter-toggle" id="filterToggle" aria-expanded="false" aria-controls="filters">검색 필터 <span id="filterCount"></span><span aria-hidden="true">＋</span></button>
   <div class="layout">
-    <aside class="side">
+    <aside class="side" id="filters" aria-label="공고 검색 필터">
       <section class="box kw">
-        <h2>키워드<button class="clr" id="kwClr" hidden>해제</button></h2>
-        <div class="flist" id="kwChips"></div>
+        <h2>관심 키워드<button class="clr" id="kwClr" hidden>해제</button></h2>
+        <p class="filter-hint">여러 개를 고르면 하나라도 포함된 공고를 보여줍니다.</p><div class="flist" id="kwChips"></div>
       </section>
       <section class="box">
         <h2>출처<button class="clr" id="srcClr" hidden>해제</button></h2>
@@ -242,10 +297,11 @@ BODY = r"""__PROMO_BANNER__
       </section>
     </aside>
 
-    <main>
+    <main id="results" tabindex="-1">
+      <div class="results-heading"><h2 id="viewTitle">전체 공고</h2><p>제목을 누르면 상세 내용과 원문을 볼 수 있어요.</p></div>
       <div class="toolbar">
-        <span class="count" id="count">–</span>
-        <span class="active-f" id="activeF"></span>
+        <span class="count" id="count" role="status" aria-live="polite">불러오는 중…</span>
+        <button class="reset-filters" id="resetFilters" hidden>필터 초기화</button>
         <span class="sp"></span>
         <select class="sortsel" id="week" hidden aria-label="수집 주차"></select>
         <select class="sortsel" id="sort" aria-label="정렬">
@@ -254,17 +310,21 @@ BODY = r"""__PROMO_BANNER__
           <option value="org">기관 순</option>
         </select>
       </div>
+      <div class="active-f" id="activeF" aria-label="적용된 검색 조건"></div>
       <div class="tbl">
         <div class="cols thead">
           <span></span><span>마감</span><span>공고명</span><span class="c-org">소관 · 수행기관</span>
-          <span class="c-field">분야</span><span class="c-per">신청기간</span><span class="c-kw">키워드</span>
+          <span class="c-field">분야</span><span class="c-per">신청기간</span><span class="c-kw">키워드</span><span></span>
         </div>
-        <div id="list"></div>
+        <div id="list"><div class="empty">공고를 불러오는 중입니다.</div></div>
       </div>
+      <nav class="pagination" id="pagination" aria-label="공고 목록 페이지" hidden>
+        <button id="prevPage">이전</button><span id="pageInfo" role="status"></span><button id="nextPage">다음</button>
+      </nav>
+      <p class="list-note">접수 예정·일정 미확인 공고가 포함되어 있습니다. 신청 전 원문을 확인해 주세요.</p>
     </main>
   </div>
 
-  __PROMO_STRIP__
   __FOOTER__
 </div>
 
@@ -275,21 +335,37 @@ let DATA = {items: [], updated: '', issue_key: '', keywords: []};
 let mine = {star: {}, memo: {}};
 let quick = 'all', srcFilter = new Set(), kwFilter = new Set(), selDay = null, calMonth = null;
 const openDet = new Set();
+const PAGE_SIZE = 20;
+let page = 1;
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c =>
   ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
-try { mine = Object.assign(mine, JSON.parse(localStorage.getItem(LS) || '{}')); } catch (e) {}
-const save = () => { try { localStorage.setItem(LS, JSON.stringify(mine)); } catch (e) {} };
+try {
+  const stored = JSON.parse(localStorage.getItem(LS) || '{}');
+  for(const key of ['star', 'memo']) {
+    if(stored && stored[key] && typeof stored[key] === 'object' && !Array.isArray(stored[key])) mine[key] = stored[key];
+  }
+} catch (e) {}
+const save = () => {
+  try { localStorage.setItem(LS, JSON.stringify(mine)); return true; }
+  catch (e) { return false; }
+};
+function saveFeedback(ok){
+  $('#saveNotice').hidden = ok;
+  $('#saveNotice').textContent = ok ? '' : '브라우저에 저장하지 못했습니다. 새로고침하면 관심 표시와 메모가 사라질 수 있습니다.';
+}
 
 const today = () => { const d = new Date(); d.setHours(0,0,0,0); return d; };
 const isoOf = d => d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' +
   String(d.getDate()).padStart(2,'0');
-function dday(end){
-  if(!end) return {n:null, label:'상시', cls:'badge-success'};
+function dday(end, start){
+  if(!end) return {n:null, label:'일정 확인', cls:'badge-neutral'};
   const d = new Date(end + 'T00:00:00');
   const n = Math.round((d - today()) / 86400000);
-  if(n < 0)  return {n, label:'마감', cls:'badge-neutral'};
+  if(!Number.isFinite(n)) return {n:null, label:'일정 확인', cls:'badge-neutral'};
+  if(n < 0) return {n, label:'마감', cls:'badge-neutral'};
+  if(start && new Date(start + 'T00:00:00') > today()) return {n, label:'접수 예정', cls:'badge-neutral'};
   if(n === 0) return {n, label:'오늘', cls:'badge-critical'};
   if(n <= 3)  return {n, label:'D-' + n, cls:'badge-critical'};
   if(n <= 7)  return {n, label:'D-' + n, cls:'badge-attention'};
@@ -298,7 +374,7 @@ function dday(end){
 /* 마감 구간 — 표를 이 단위로 묶는다 */
 function bucket(it){
   const n = dday(it.end).n;
-  if(n === null) return '상시 접수';
+  if(n === null) return '일정 확인이 필요한 공고';
   if(n < 0) return '마감됨';
   if(n === 0) return '오늘 마감';
   if(n <= 7) return '7일 안에 마감';
@@ -322,7 +398,7 @@ function chipRow(sel, attr, names, counts, set){
 }
 function setQuick(f){
   quick = f;
-  document.querySelectorAll('[data-f]').forEach(x => x.classList.toggle('on', x.dataset.f === f));
+  document.querySelectorAll('[data-f]').forEach(x => { x.classList.toggle('on', x.dataset.f === f); x.setAttribute('aria-pressed', String(x.dataset.f === f)); });
   if(f === 'archive'){ selDay = null; if($('#sort').value === 'end') $('#sort').value = 'new'; }
   render();
 }
@@ -334,20 +410,25 @@ async function boot(){
     /* data.js 가 없는 옛 배포본 — 진행 중 목록만이라도 보여준다 */
     try {
       const r = await fetch('./data.json?t=' + Date.now());
+      if(!r.ok) throw new Error('data unavailable');
       DATA = await r.json();
+      if(!Array.isArray(DATA.items)) throw new Error('invalid data');
     } catch (e) {
       $('#list').innerHTML = '<div class="empty t-body">공고 데이터를 불러오지 못했습니다.<br>' +
-        '잠시 후 새로고침해 주세요.</div>';
+        '잠시 후 다시 시도해 주세요.<br><button class="reset-filters" onclick="location.reload()">다시 불러오기</button></div>';
+      $('#updated').textContent = '공고 데이터를 불러오지 못했습니다.';
+      $('#count').textContent = '불러오기 실패';
       return;
     }
   }
-  DATA.items = DATA.items || [];
+  DATA.items = Array.isArray(DATA.items) ? DATA.items : [];
+  const footerSources = $('#footerSources');
+  if(footerSources) footerSources.textContent = [...new Set(DATA.items.map(i => i.source).filter(Boolean))].join(' · ') || '등록된 공고 없음';
   $('#updated').textContent = ymd(DATA.updated) + ' 수집 · 키워드 ' +
     (DATA.keywords || []).length + '개 · 매주 월요일 갱신';
 
-  const open = openItems();
   const kc = {}, sc = {};
-  open.forEach(i => { (i.kw || []).forEach(k => kc[k] = (kc[k] || 0) + 1);
+  DATA.items.forEach(i => { (i.kw || []).forEach(k => kc[k] = (kc[k] || 0) + 1);
                       if(i.source) sc[i.source] = (sc[i.source] || 0) + 1; });
   const kws = Object.keys(kc).filter(k => k !== '*').sort((a,b) => kc[b] - kc[a]);
   chipRow('#kwChips', 'kw', kws, kc, kwFilter);
@@ -367,6 +448,22 @@ async function boot(){
   $('#q').oninput = render;
   $('#sort').onchange = render;
   $('#list').onclick = onListClick;
+  $('#resetFilters').onclick = resetFilters;
+  $('#activeF').onclick = e => {
+    const b = e.target.closest('[data-clear]');
+    if(!b) return;
+    if(b.dataset.clear === 'kw') kwFilter.delete(b.dataset.value);
+    if(b.dataset.clear === 'src') srcFilter.delete(b.dataset.value);
+    if(b.dataset.clear === 'q') $('#q').value = '';
+    if(b.dataset.clear === 'day') selDay = null;
+    render();
+  };
+  $('#filterToggle').onclick = () => {
+    const on = $('#filters').classList.toggle('expanded');
+    $('#filterToggle').setAttribute('aria-expanded', String(on));
+  };
+  $('#prevPage').onclick = () => changePage(-1);
+  $('#nextPage').onclick = () => changePage(1);
   calMonth = new Date(); calMonth.setDate(1);
   render();
 }
@@ -376,39 +473,55 @@ function visible(){
   const week = $('#week').value;
   return DATA.items.filter(it => {
     if(quick === 'archive'){ if(week && it.seen !== week) return false; }
-    else if(!isOpen(it)) return false;
+
     if(srcFilter.size && !srcFilter.has(it.source)) return false;
     if(kwFilter.size && !(it.kw || []).some(k => kwFilter.has(k))) return false;
     if(quick === 'star' && !mine.star[it.k]) return false;
     if(quick === 'new' && it.seen !== DATA.issue_key) return false;
-    const d = dday(it.end);
+    const d = dday(it.end, it.start);
     if(quick === 'soon' && !(d.n !== null && d.n >= 0 && d.n <= 7)) return false;
     if(selDay && it.end !== selDay) return false;
     if(q && !((it.title + ' ' + (it.org||'') + ' ' + (it.target||'') + ' ' + (it.source||'') +
-        ' ' + (it.summary||'')).toLowerCase().includes(q))) return false;
+        ' ' + (it.summary||'') + ' ' + (it.kw||[]).join(' ')).toLowerCase().includes(q))) return false;
     return true;
   });
 }
 
 const num = (n, unit) => n + '<small>' + unit + '</small>';
-function render(){
+function resetFilters(){
+  kwFilter.clear(); srcFilter.clear(); selDay = null;
+  $('#q').value = ''; $('#week').value = ''; render();
+}
+function changePage(delta){
+  page += delta; render(true);
+  $('#results').focus({preventScroll:true});
+  $('#results').scrollIntoView({block:'start'});
+}
+function render(keepPage){
+  if(keepPage !== true) page = 1;
   const open = openItems();
-  $('#tTotal').innerHTML = num(open.length, '건');
-  $('#tNew').innerHTML = num(open.filter(i => i.seen === DATA.issue_key).length, '건');
+  $('#tTotal').innerHTML = num(DATA.items.length, '건');
+  $('#tNew').innerHTML = num(DATA.items.filter(i => i.seen === DATA.issue_key).length, '건');
   $('#tSoon').innerHTML = num(open.filter(i => {
     const n = dday(i.end).n; return n !== null && n <= 7; }).length, '건');
-  $('#tArch').innerHTML = num(DATA.items.length, '건');
+  $('#tStar').innerHTML = num(DATA.items.filter(i => mine.star[i.k]).length, '건');
+  $('#viewTitle').textContent = ({all:'전체 공고',soon:'7일 내 마감 공고',new:'최근 수집 공고',star:'관심 공고',archive:'수집 기록'})[quick];
 
   const arch = quick === 'archive';
   $('#week').hidden = !arch;
   $('#calPanel').hidden = arch;
 
-  document.querySelectorAll('[data-kw]').forEach(b => b.classList.toggle('on', kwFilter.has(b.dataset.kw)));
-  document.querySelectorAll('[data-src]').forEach(b => b.classList.toggle('on', srcFilter.has(b.dataset.src)));
+  document.querySelectorAll('[data-kw]').forEach(b => { b.classList.toggle('on', kwFilter.has(b.dataset.kw)); b.setAttribute('aria-pressed', String(kwFilter.has(b.dataset.kw))); });
+  document.querySelectorAll('[data-src]').forEach(b => { b.classList.toggle('on', srcFilter.has(b.dataset.src)); b.setAttribute('aria-pressed', String(srcFilter.has(b.dataset.src))); });
   $('#kwClr').hidden = !kwFilter.size;
   $('#srcClr').hidden = !srcFilter.size;
-  $('#activeF').innerHTML = selDay
-    ? '<button onclick="clearDay()">' + md(selDay) + ' 마감</button>' : '';
+  const active = [...kwFilter].map(v => ['kw', v, v]).concat([...srcFilter].map(v => ['src',v,v]));
+  if(selDay) active.push(['day',selDay,md(selDay) + ' 마감']);
+  if($('#q').value.trim()) active.push(['q','', '검색: ' + $('#q').value.trim()]);
+  $('#activeF').innerHTML = active.map(([kind,value,label]) => '<button data-clear="' + kind + '" data-value="' + esc(value) + '" aria-label="' + esc(label) + ' 조건 해제">' + esc(label) + '</button>').join('');
+  $('#resetFilters').hidden = !active.length && !$('#week').value;
+  $('#filterCount').textContent = active.length ? active.length + '개 적용' : '';
+  $('#activeF').hidden = !active.length;
 
   const items = visible();
   const sort = $('#sort').value;
@@ -418,7 +531,7 @@ function render(){
     : (isOpen(a) ? 0 : 1) - (isOpen(b) ? 0 : 1)
       || (a.end ? 0 : 1) - (b.end ? 0 : 1) || (a.end||'').localeCompare(b.end||''));
 
-  const base = arch ? DATA.items.length : open.length;
+  const base = DATA.items.length;
   $('#count').textContent = (arch ? '아카이브 ' : '') + items.length + '건'
     + (items.length !== base ? ' / 전체 ' + base + '건' : '');
 
@@ -427,8 +540,14 @@ function render(){
     : sort === 'new' ? (it => ymd(it.seen) + ' 수집') : null;
   const counts = {};
   if(keyOfGroup) items.forEach(it => { const g = keyOfGroup(it); counts[g] = (counts[g] || 0) + 1; });
+  const pages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
+  page = Math.min(Math.max(1, page), pages);
+  $('#pagination').hidden = pages <= 1;
+  $('#pageInfo').textContent = page + ' / ' + pages + ' 페이지 · ' + items.length + '건';
+  $('#prevPage').disabled = page === 1;
+  $('#nextPage').disabled = page === pages;
   let html = '', last = null;
-  for(const it of items){
+  for(const it of items.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)){
     if(keyOfGroup){
       const g = keyOfGroup(it);
       if(g !== last){
@@ -441,33 +560,33 @@ function render(){
     html += row(it);
   }
   $('#list').innerHTML = html ||
-    '<div class="empty t-body">조건에 맞는 공고가 없습니다.<br>검색어나 필터를 바꿔보세요.</div>';
+    '<div class="empty t-body">' + (quick === 'star' && !Object.values(mine.star).some(Boolean) ? '아직 관심 공고가 없습니다.<br>공고 옆 ☆를 눌러 모아보세요.<br><button class="reset-filters" onclick="resetFilters();setQuick(\'all\')">전체 공고 보기</button>' : '조건에 맞는 공고가 없습니다.<br>검색어나 필터를 바꿔보세요.<br><button class="reset-filters" onclick="resetFilters()">검색 조건 초기화</button>') + '</div>';
   if(!arch) renderCal();
 }
 
 function period(it){
   return it.start && it.end ? md(it.start) + ' ~ ' + md(it.end)
-    : it.end ? '~ ' + md(it.end) : '상시 접수';
+    : it.end ? '~ ' + md(it.end) : '원문에서 확인';
 }
 function row(it){
-  const d = dday(it.end);
+  const d = dday(it.end, it.start);
   const id = cid(it.k);
   const starred = !!mine.star[it.k];
   const kws = (it.kw || []).filter(k => k !== '*');
   const opened = openDet.has(it.k);
   return '<div class="cols row' + (isOpen(it) ? '' : ' closed') + (opened ? ' open' : '') +
       '" id="c-' + id + '" data-id="' + id + '">' +
-    '<button class="star' + (starred ? ' on' : '') + '" data-star="' + id + '" aria-label="관심 표시">' +
+    '<button class="star' + (starred ? ' on' : '') + '" data-star="' + id + '" aria-pressed="' + starred + '" aria-label="' + esc(it.title) + (starred ? ' 관심 해제' : ' 관심 저장') + '">' +
       (starred ? '★' : '☆') + '</button>' +
     '<span><span class="dd ' + d.cls + '">' + esc(d.label) + '</span></span>' +
-    '<span class="ti" title="' + esc(it.title) + '">' +
-      (it.seen === DATA.issue_key ? '<span class="new">NEW</span>' : '') +
+    '<button class="ti" data-detail="' + id + '" aria-expanded="' + opened + '" aria-controls="d-' + id + '" title="' + esc(it.title) + '">' +
+      (it.seen === DATA.issue_key && (today() - new Date(it.seen + 'T00:00:00')) < 7 * 86400000 ? '<span class="new">신규</span>' : '') +
       '<span class="tx">' + esc(it.title) + '</span>' +
-      '<span class="sub">' + esc([it.org, period(it)].filter(Boolean).join(' · ')) + '</span></span>' +
+      '<span class="sub">' + esc([it.org, period(it)].filter(Boolean).join(' · ')) + '</span></button>' +
     '<span class="ell c-org" title="' + esc(it.org) + '">' + esc(it.org) + '</span>' +
     '<span class="ell c-field">' + esc(it.field) + '</span>' +
     '<span class="per c-per">' + esc(period(it)) + '</span>' +
-    '<span class="ell kwt c-kw" title="' + esc(kws.join(' · ')) + '">' + esc(kws.join(' · ')) + '</span>' +
+    '<span class="ell kwt c-kw" title="' + esc(kws.join(' · ')) + '">' + esc(kws.join(' · ')) + '</span><span class="row-chevron" aria-hidden="true">' + (opened ? '−' : '+') + '</span>' +
   '</div>' + (opened ? detail(it) : '');
 }
 function detail(it){
@@ -481,10 +600,10 @@ function detail(it){
         sp('규모', it.budget) + sp('신청기간', period(it)) + sp('키워드', kws.join(' · ')) +
         sp('출처', it.source) + sp('수집일', ymd(it.seen)) + '</dl>' +
       '<a class="btn btn-primary" href="' + esc(it.link) + '" target="_blank" rel="noopener">공고 원문 보기</a>' +
-    '</div><div>' +
+    '</div><div><label class="memo-label" for="m-' + id + '">나의 메모</label><p class="memo-hint">이 브라우저에만 저장됩니다.</p>' +
       '<textarea class="memo" id="m-' + id + '" data-memo="' + id + '"' +
         ' placeholder="메모 (이 브라우저에만 저장됩니다)">' + esc(memo) + '</textarea>' +
-      '<div class="saved" id="s-' + id + '"></div>' +
+      '<div class="saved" role="status" id="s-' + id + '"></div>' +
     '</div></div>';
 }
 
@@ -512,19 +631,25 @@ function onListClick(e){
 function toggleStar(id){
   const k = keyOf(id);
   mine.star[k] = !mine.star[k];
-  save();
+  saveFeedback(save());
+  $('#tStar').innerHTML = num(DATA.items.filter(i => mine.star[i.k]).length, '건');
   /* 목록을 통째로 다시 그리면 쓰던 메모의 커서가 날아간다.
      '관심' 탭이 켜져 있어 목록 자체가 바뀔 때만 다시 그린다. */
-  if(quick === 'star'){ render(); return; }
+  if(quick === 'star'){ render(true); return; }
   const btn = document.querySelector('#c-' + id + ' .star');
   if(btn){
     btn.classList.toggle('on', !!mine.star[k]);
     btn.textContent = mine.star[k] ? '★' : '☆';
+    btn.setAttribute('aria-pressed', String(!!mine.star[k]));
+    btn.setAttribute('aria-label', itemOf(id).title + (mine.star[k] ? ' 관심 해제' : ' 관심 저장'));
   }
 }
 function toggleDet(id){
   const k = keyOf(id), r = document.getElementById('c-' + id);
   const el = document.getElementById('d-' + id);
+  const trigger = r.querySelector('[data-detail]');
+  trigger.setAttribute('aria-expanded', String(!el));
+  r.querySelector('.row-chevron').textContent = el ? '+' : '−';
   if(el){ openDet.delete(k); el.remove(); r.classList.remove('open'); return; }
   openDet.add(k);
   r.classList.add('open');
@@ -535,11 +660,12 @@ document.addEventListener('input', e => {
   const id = e.target.dataset && e.target.dataset.memo;
   if(!id) return;
   mine.memo[keyOf(id)] = e.target.value;
+  const ok = save();
+  saveFeedback(ok);
   clearTimeout(memoTimer);
   memoTimer = setTimeout(() => {
-    save();
     const s = document.getElementById('s-' + id);
-    if(s){ s.textContent = '저장됨'; setTimeout(() => s.textContent = '', 1800); }
+    if(s){ s.textContent = ok ? '저장됨' : '저장하지 못했습니다'; setTimeout(() => s.textContent = '', 1800); }
   }, 400);
 });
 
@@ -566,9 +692,10 @@ function renderCal(){
     const iso = y + '-' + String(m+1).padStart(2,'0') + '-' + String(day).padStart(2,'0');
     const n = byDay[iso] || 0;
     const cls = 'day' + (n ? ' has' : '') + (iso === tIso ? ' today' : '') + (selDay === iso ? ' sel' : '');
-    html += '<div class="' + cls + '"' +
-      (n ? ' title="' + md(iso) + ' 마감 ' + n + '건" onclick="pickDay(\'' + iso + '\')"' : '') + '>' +
-      '<div>' + day + '</div>' + (n ? '<div class="n">' + n + '</div>' : '') + '</div>';
+    const tag = n ? 'button' : 'div';
+    html += '<' + tag + ' class="' + cls + '"' +
+      (n ? ' aria-pressed="' + (selDay === iso) + '" aria-label="' + md(iso) + ' 마감 ' + n + '건" title="' + md(iso) + ' 마감 ' + n + '건" onclick="pickDay(\'' + iso + '\')"' : '') + '>' +
+      '<div>' + day + '</div>' + (n ? '<span class="n">' + n + '</span>' : '') + '</' + tag + '>';
   }
   $('#cal').innerHTML = html;
 }
@@ -597,10 +724,10 @@ def publish_dashboard(docs_dir: str, base_url: str, thumb_src: str = None) -> st
 
     body = (BODY.replace("__PROMO_BANNER__", theme.PROMO_BANNER)
                 .replace("__LOGO__", theme.LOGO_LIGHT)
-                .replace("__PROMO_STRIP__", theme.PROMO_STRIP)
-                .replace("__FOOTER__", theme.footer(LEGAL_EXTRA)))
+                .replace("__PROMO_STRIP__", "")
+                .replace("__FOOTER__", gov_footer.footer()))
 
     with open(os.path.join(out_dir, "index.html"), "w", encoding="utf-8") as f:
-        f.write(theme.page(TITLE, DESC, thumb_url, body, EXTRA_CSS,
+        f.write(theme.page(TITLE, DESC, thumb_url, body, EXTRA_CSS + gov_footer.CSS,
                            thumb_size=(1200, 630)))
     return f"{base_url}/gov/"
