@@ -12,7 +12,7 @@
 ```
 수집  이 PC 작업 스케줄러 '모두의뉴스_수집' (월 08:00 + 로그온 catch-up)
       → windows/run_collect.ps1 → python -m src.main → docs/ 갱신
-공개  docs/ 를 GitHub Desktop 으로 Push → Pages
+공개  수집 직후 run_collect.ps1 이 docs/ 를 커밋·push → Pages (자동)
 발송  이 PC 작업 스케줄러 (월 08:05 + 로그온 catch-up) → windows/kakao_send.py  ※ 미등록
 ```
 
@@ -94,13 +94,11 @@ powershell -ExecutionPolicy Bypass -File windows\start_dashboard.ps1
 
 ## 배포
 
-이 PC에는 git 자격증명이 없다. **GitHub Desktop을 열고 `Push origin`** 을 누르는 방식.
-(로그인은 이미 완료. `gh` CLI도 설치돼 있으나 미인증.)
+명령줄 `git push` 가 된다(Git Credential Manager 에 로그인 정보가 있음, 2026-09-28 확인).
+`gh` CLI 는 미인증. 주간 수집 스크립트가 docs/ 를 자동으로 올린다 — 실패하면 `windows/collect.log` 에 경고가 남는다.
 
 ## 남은 작업
 
-- **공개 사이트 반영**: GitHub Desktop 에서 Commit → Push origin. 수집은 로컬 docs/ 만 고치므로
-  공개 페이지를 최신으로 유지하려면 매주 Push 가 필요하다.
 - API 키 미등록(`.env`): `DATA_GO_KR_KEY`(K-Startup·나라장터) `BIZINFO_KEY` `NAVER_CLIENT_ID/SECRET`.
   없어도 돌아가지만 K-Startup·나라장터 공고와 뉴스는 빠진다. 넣은 뒤 `python tools/check_keys.py`.
 - `config/rooms.json` 에 실제 단톡방 미지정 (대시보드에서 창 목록으로 선택)
