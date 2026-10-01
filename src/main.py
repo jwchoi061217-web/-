@@ -6,6 +6,7 @@
   python -m src.main --date 2026-08-03
   python -m src.main --only gov # 특정 카테고리만
   python -m src.main --only gov --days 60   # 첫 실행·누락 보충용으로 기간을 넓혀 수집
+  python -m src.main --only gov --no-state --out /tmp/preview   # docs/ 를 건드리지 않고 결과만 미리보기
 
 키는 환경변수 또는 저장소 루트의 .env 에서 읽는다(.env 는 커밋되지 않는다).
 네이버 키가 없으면 뉴스 카테고리만 건너뛰고 공고는 그대로 발행한다.
@@ -51,7 +52,7 @@ def load_dotenv(path: str = os.path.join(ROOT, ".env")) -> None:
 
 
 def run(mock: bool = False, date_override: str = None, only: list = None,
-        commit_state: bool = True, days: int = None) -> None:
+        commit_state: bool = True, days: int = None, out_dir: str = None) -> None:
     load_dotenv()
     issue_date = date.fromisoformat(date_override) if date_override else datetime.now(KST).date()
     base_url = os.environ.get("PAGES_BASE_URL", "https://jwchoi061217-web.github.io/-").rstrip("/")
@@ -64,7 +65,7 @@ def run(mock: bool = False, date_override: str = None, only: list = None,
 
     # 시험 실행은 임시 폴더에 쓴다 — fixtures 가 실제 아카이브에 섞이면 지울 방법이 없다
     docs_dir = (os.path.join(tempfile.gettempdir(), "modu_news_mock_docs") if mock
-                else os.path.join(ROOT, "docs"))
+                else (os.path.abspath(out_dir) if out_dir else os.path.join(ROOT, "docs")))
     gov_cfg = collect_gov.load_config()
     if days:
         gov_cfg["days"] = days
@@ -159,7 +160,8 @@ if __name__ == "__main__":
     ap.add_argument("--no-state", action="store_true",
                     help="공고 '이미 보낸 것' 기록을 갱신하지 않음 (테스트용)")
     ap.add_argument("--days", type=int, help="공고 수집 기간(일). 기본은 config 의 days")
+    ap.add_argument("--out", help="산출물을 docs/ 대신 이 폴더에 쓴다 (미리보기용, 공개 사이트에 반영 안 됨)")
     args = ap.parse_args()
     run(mock=args.mock, date_override=args.date,
         only=args.only.split(",") if args.only else None,
-        commit_state=not args.no_state, days=args.days)
+        commit_state=not args.no_state, days=args.days, out_dir=args.out)

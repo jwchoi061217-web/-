@@ -75,15 +75,24 @@ def _tabs(all_cats: list) -> list:
 
 # ── 공고 ────────────────────────────────────────────────────────────────
 
+STRUCTURED_DEADLINE_SOURCES = {"기업마당", "K-Startup", "나라장터(용역)"}
+
+
+def _no_deadline_label(item: dict) -> str:
+    """마감일이 비었을 때 — 마감일을 구조화해 주는 소스면 '상시 접수', 아니면 '마감 원문 확인'.
+    모르는 것을 상시라고 적지 않는다."""
+    return "상시 접수" if item.get("source") in STRUCTURED_DEADLINE_SOURCES else "마감 원문 확인"
+
+
 def _dday(item: dict, today: date):
     """(남은 일수, 표시문자열, 배지 클래스)."""
     end = item.get("period_end")
     if not end:
-        return None, "상시 접수", "badge-success"
+        return None, _no_deadline_label(item), "badge-success" if item.get("source") in STRUCTURED_DEADLINE_SOURCES else "badge-neutral"
     try:
         d = date.fromisoformat(end[:10])
     except ValueError:
-        return None, "상시 접수", "badge-success"
+        return None, _no_deadline_label(item), "badge-neutral"
     left = (d - today).days
     if left < 0:
         return left, "마감", "badge-neutral"
@@ -99,8 +108,11 @@ def _dday(item: dict, today: date):
 def _gov_card(cat: str, idx: int, it: dict, today: date) -> str:
     _, label, cls = _dday(it, today)
     meta_parts = [p for p in (it.get("org"), it.get("target")) if p]
+    region = it.get("region")
+    if region and region != "전국":
+        meta_parts.append(region)
     end = fmt_md(it.get("period_end"))
-    meta_parts.append(f"신청 ~{end}" if end else "상시 접수")
+    meta_parts.append(f"신청 ~{end}" if end else _no_deadline_label(it))
     return (
         f'<a class="card" href="news/{cat}-{idx}.html">'
         f'<div class="card-head"><h3 class="card-title t-sub-lg">'
@@ -221,9 +233,11 @@ def _gov_detail(cat: str, idx: int, it: dict, total: int, thumb_url: str,
     elif end:
         period = f"~ {end}"
     else:
-        period = "상시 접수 / 공고 원문 확인"
+        period = "상시 접수 / 공고 원문 확인" if it.get("source") in STRUCTURED_DEADLINE_SOURCES \
+            else "공고 원문에서 확인"
 
-    rows = [("소관기관", it.get("org")), ("신청기간", f"{period} ({dlabel})"),
+    rows = [("소관기관", it.get("org")), ("지역", it.get("region")),
+            ("신청기간", f"{period} ({dlabel})"),
             ("지원대상", it.get("target")), ("사업규모", it.get("budget")),
             ("출처", it.get("source"))]
     kv = "\n".join(f'<div class="spec"><div class="k">{k}</div>'

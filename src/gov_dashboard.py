@@ -582,7 +582,7 @@ function row(it){
     '<button class="ti" data-detail="' + id + '" aria-expanded="' + opened + '" aria-controls="d-' + id + '" title="' + esc(it.title) + '">' +
       (it.seen === DATA.issue_key && (today() - new Date(it.seen + 'T00:00:00')) < 7 * 86400000 ? '<span class="new">신규</span>' : '') +
       '<span class="tx">' + esc(it.title) + '</span>' +
-      '<span class="sub">' + esc([it.org, period(it)].filter(Boolean).join(' · ')) + '</span></button>' +
+      '<span class="sub">' + esc([it.org, (it.region && it.region !== '전국') ? it.region : '', period(it)].filter(Boolean).join(' · ')) + '</span></button>' +
     '<span class="ell c-org" title="' + esc(it.org) + '">' + esc(it.org) + '</span>' +
     '<span class="ell c-field">' + esc(it.field) + '</span>' +
     '<span class="per c-per">' + esc(period(it)) + '</span>' +
@@ -596,7 +596,7 @@ function detail(it){
   const sp = (k, v) => v ? '<dt>' + k + '</dt><dd>' + esc(v) + '</dd>' : '';
   return '<div class="det" id="d-' + id + '"><div>' +
       (it.summary ? '<p class="sum">' + esc(it.summary) + '</p>' : '') +
-      '<dl class="specs">' + sp('기관', it.org) + sp('분야', it.field) + sp('대상', it.target) +
+      '<dl class="specs">' + sp('기관', it.org) + sp('지역', it.region) + sp('분야', it.field) + sp('대상', it.target) +
         sp('규모', it.budget) + sp('신청기간', period(it)) + sp('키워드', kws.join(' · ')) +
         sp('출처', it.source) + sp('수집일', ymd(it.seen)) + '</dl>' +
       '<a class="btn btn-primary" href="' + esc(it.link) + '" target="_blank" rel="noopener">공고 원문 보기</a>' +

@@ -368,7 +368,7 @@ function renderSources(){
           onchange="setSrc('${k}','max_items',+this.value)"></td>
       <td>${k==='g2b' ? `금액 하한선 <input type="number" value="${v.min_budget??0}" style="width:130px"
             onchange="setSrc('${k}','min_budget',+this.value)"> 원
-            <span class="muted">— 첫 실행 후 실제 건수를 보고 조정하세요</span>` : '<span class="muted">필터 없음 (전부 수집)</span>'}</td>
+            <span class="muted">— 첫 실행 후 실제 건수를 보고 조정하세요</span>` : '<span class="muted">공통 필터 적용 — 키워드 점수 · 지역(전국/수도권) · 마감 3일 (config/gov_sources.json)</span>'}</td>
     </tr>`).join('');
 }
 function setSrc(k,f,v){ S.sources.sources[k][f]=v; }

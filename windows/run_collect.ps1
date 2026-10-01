@@ -59,6 +59,13 @@ if ($code -eq 0) {
     if ($LASTEXITCODE -ne 0) {
         cmd /c "git commit -q -m `"publish: $week weekly`" >> `"$log`" 2>&1"
     }
+    # 원격에 다른 곳(예: Claude 세션·다른 PC)에서 올린 코드 커밋이 있으면 push 가 거부된다.
+    # docs/ 커밋만 들고 있으니 rebase 로 그 위에 얹는다. 충돌이 나면 되돌리고 경고만 남긴다.
+    cmd /c "git pull --rebase origin main >> `"$log`" 2>&1"
+    if ($LASTEXITCODE -ne 0) {
+        cmd /c "git rebase --abort >> `"$log`" 2>&1"
+        Write-Log '[경고] 원격 변경을 합치지 못했습니다 - 수동으로 git pull 후 다시 실행하세요'
+    }
     cmd /c "git push origin main >> `"$log`" 2>&1"
     if ($LASTEXITCODE -eq 0) { Write-Log '공개 사이트 반영 완료' }
     else { Write-Log '[경고] 공개 사이트 반영 실패 - GitHub 로그인 상태를 확인하세요' }

@@ -1,17 +1,26 @@
-"""정부지원사업 공고 수집 (4개 소스) · 정규화 · 마감 필터 · 신규 판정.
+"""정부지원사업 공고 수집 (7개 소스) · 정규화 · 키워드 점수 · 지역 · 마감 필터 · 신규 판정.
 
 소스
   bizinfo   기업마당 지원사업 공고      BIZINFO_KEY (기업마당 자체 발급 인증키)
   kstartup  창업진흥원 K-Startup 사업공고 DATA_GO_KR_KEY (공공데이터포털)
   g2b       조달청 나라장터 용역 입찰공고 DATA_GO_KR_KEY (금액 하한선 필터)
   moel      고용노동부 알려드립니다 RSS   (인증 불필요)
+  kead      한국장애인고용공단 공지사항   (인증 불필요, 공개 목록 페이지)
+  hrdkorea  한국산업인력공단 공지사항     (인증 불필요, 공개 목록 페이지)
+  kosha     안전보건공단 공지사항·입찰공고 (인증 불필요, 사이트의 게시판 조회 API)
 
   기업마당은 BIZINFO_KEY 가 없으면 공개 목록 페이지로 대신 수집한다(public_fallback).
   키 없이도 매주 수집이 돌아가게 하기 위한 장치다 — 키 4개가 전부 미등록인 채로
-  월요일 실행이 8주 연속 실패한 전례가 있다.
+  월요일 실행이 8주 연속 실패한 전례가 있다. 2026-09-30 에 추가한 세 기관도 같은 이유로
+  키 없이 돌아가는 공개 경로만 쓴다.
 
-키워드 필터 (config/gov_sources.json 의 keywords)
-  include 중 하나라도 제목·분야·대상·개요에 있으면 통과, exclude 가 제목에 있으면 제외.
+필터 (config/gov_sources.json)
+  keywords.include  키워드별 가중치. 제목·분야·대상·개요에서 걸린 가중치 합이 min_score 이상이면 통과.
+                    (예전 형식인 단순 목록도 받는다 — 가중치 1, min_score 1 로 본다)
+  keywords.exclude  제목·분야에 있으면 점수와 무관하게 제외.
+  region.allow      허용 지역(전국·서울·경기·인천 …). [지역] 표기·소관 광역지자체·제목 지역명으로 판정.
+  region.drop_county  군(郡) 단위 지자체명이 제목에 있으면 제외.
+  min_days_left     마감까지 이 일수 미만이면 신규(주차 페이지·카톡)에서 제외. 모아보기에는 남는다.
 
 저장소
   docs/gov/data.json      진행 중인 공고 (마감되면 빠진다)
@@ -67,12 +76,36 @@ KSTARTUP_URL = "https://apis.data.go.kr/B552735/kisedKstartupService01/getAnnoun
 G2B_URL = "https://apis.data.go.kr/1230000/ad/BidPublicInfoService/getBidPblancListInfoServc"
 MOEL_RSS_URL = "https://www.moel.go.kr/rss/notice.do"
 
+# 한국장애인고용공단 공지사항 — 서버가 그려 주는 표(10건/쪽). robots.txt 는 /bbs/ 를 막지 않는다.
+KEAD_HOST = "https://www.kead.or.kr"
+KEAD_LIST = KEAD_HOST + "/bbs/deptgongji/bbsPage.do"
+KEAD_MENU = "MENU0895"
+KEAD_DETAIL = KEAD_HOST + "/bbs/deptgongji/bbsView.do?bbsCnId={}&menuId=" + KEAD_MENU
+# 한국산업인력공단 공지사항 — /3/1/1?pageNo=N (10건/쪽), 상세 /3/1/1?k=<번호>
+HRDK_HOST = "https://www.hrdkorea.or.kr"
+HRDK_LIST = HRDK_HOST + "/3/1/1"
+HRDK_DETAIL = HRDK_HOST + "/3/1/1?k={}"
+# 안전보건공단 대표누리집 — 화면 전체가 Vue 로 그려져 HTML 목록이 없다. 사이트 자신이 쓰는
+# 표준게시판(stdtboard) 조회 API 를 그대로 호출한다. 로그인 토큰 없이도 공개 게시판은 읽힌다.
+# 상세 페이지는 bbsId·pstNo 쿼리로 바로 열린다(2026-09-30 확인).
+KOSHA_API = "https://www.kosha.or.kr/api/compn24/auth/stdtboard/process.do"
+KOSHA_DETAIL = "https://www.kosha.or.kr/notification/notice/contruction?bbsId={}&pstNo={}"
+KOSHA_HEADERS = {"User-Agent": PUBLIC_UA, "chnlId": "kosha24",
+                 "Accept": "application/json, text/javascript, */*; q=0.01",
+                 "Origin": "https://www.kosha.or.kr",
+                 "Referer": "https://www.kosha.or.kr/notification/notice",
+                 "X-Requested-With": "XMLHttpRequest"}
+KOSHA_PAGE_ROWS = 50
+LIST_MAX_PAGES = 15            # 공개 목록 게시판을 넘겨 읽는 최대 쪽수 (days 안쪽까지만 읽고 멈춘다)
+
 # seen_gov.json 을 무한히 키우지 않기 위한 보관 기간
 SEEN_KEEP_DAYS = 180
 
 DEFAULT_CONFIG = {
     "days": 7,
-    "keywords": {"include": [], "exclude": []},
+    "min_days_left": 0,
+    "region": {"allow": [], "drop_county": False},
+    "keywords": {"include": {}, "exclude": [], "min_score": 1},
     "sources": {
         "bizinfo": {"enabled": True, "label": "기업마당", "max_items": 300,
                     "public_fallback": True},
@@ -80,8 +113,17 @@ DEFAULT_CONFIG = {
         "g2b": {"enabled": True, "label": "나라장터(용역)", "max_items": 300,
                 "min_budget": 50000000},
         "moel": {"enabled": True, "label": "고용노동부", "max_items": 100},
+        "kead": {"enabled": True, "label": "장애인고용공단", "max_items": 100, "detail_max": 30},
+        "hrdkorea": {"enabled": True, "label": "한국산업인력공단", "max_items": 100, "detail_max": 30},
+        "kosha": {"enabled": True, "label": "안전보건공단", "max_items": 150,
+                  "boards": [{"id": "B2025021400001", "name": "공지사항"},
+                             {"id": "B2025021400009", "name": "입찰공고"}]},
     },
 }
+
+# 마감일을 구조화해 주는 소스. 여기 없는 소스의 공고는 마감일이 비면 '상시'가 아니라
+# '원문 확인'으로 표시한다 — 모르는 것을 상시라고 말하면 안 된다.
+STRUCTURED_DEADLINE_SOURCES = {"bizinfo", "kstartup", "g2b"}
 
 
 class MissingKey(RuntimeError):
@@ -138,17 +180,48 @@ def _check_xml_api_error(text: str) -> None:
 
 # ── 공통 유틸 ────────────────────────────────────────────────────────────
 
+def normalize_keywords(kw: dict) -> dict:
+    """include 를 {키워드: 가중치} 로 통일한다.
+
+    예전 형식(단순 목록)은 가중치 1·min_score 1 로 읽어 동작이 그대로 유지된다.
+    설명용 "_…" 키는 무시한다."""
+    kw = kw or {}
+    include = kw.get("include") or {}
+    if isinstance(include, list):
+        weights = {str(k).strip(): 1 for k in include if str(k).strip()}
+        min_score = int(kw.get("min_score") or 1)
+    else:
+        weights = {}
+        for k, w in include.items():
+            k = str(k).strip()
+            if not k or k.startswith("_"):
+                continue
+            try:
+                weights[k] = max(1, int(w))
+            except (TypeError, ValueError):
+                weights[k] = 1
+        min_score = int(kw.get("min_score") or (2 if weights else 1))
+    exclude = [str(k).strip() for k in (kw.get("exclude") or []) if str(k).strip()]
+    return {"include": weights, "exclude": exclude, "min_score": min_score}
+
+
 def load_config(path: str = CONFIG_PATH) -> dict:
     cfg = json.loads(json.dumps(DEFAULT_CONFIG))  # 깊은 복사
     if os.path.exists(path):
         with open(path, encoding="utf-8") as f:
             user = json.load(f)
         cfg["days"] = user.get("days", cfg["days"])
-        kw = user.get("keywords") or {}
-        cfg["keywords"] = {"include": [k for k in kw.get("include", []) if k],
-                           "exclude": [k for k in kw.get("exclude", []) if k]}
+        cfg["min_days_left"] = int(user.get("min_days_left") or 0)
+        region = user.get("region") or {}
+        cfg["region"] = {"allow": [str(r).strip() for r in (region.get("allow") or []) if str(r).strip()],
+                         "drop_county": bool(region.get("drop_county", False)),
+                         "keep_min_score": int(region.get("keep_min_score") or 0)}
+        cfg["keywords"] = normalize_keywords(user.get("keywords") or {})
         for name, over in (user.get("sources") or {}).items():
-            cfg["sources"].setdefault(name, {}).update(over)
+            cfg["sources"].setdefault(name, {}).update(
+                {k: v for k, v in over.items() if not str(k).startswith("_")})
+    else:
+        cfg["keywords"] = normalize_keywords(cfg["keywords"])
     return cfg
 
 
@@ -191,6 +264,16 @@ def parse_date(s) -> str:
         if mon:
             try:
                 return date(int(m.group(3)), mon, int(m.group(1))).isoformat()
+            except ValueError:
+                return None
+
+    # 'Mon Sep 21 13:43:44 KST 2026' — 자바 Date 를 그대로 찍는 사이트(한국산업인력공단)가 있다
+    m = re.search(r"\b([A-Za-z]{3})\s+(\d{1,2})\s+\d{2}:\d{2}:\d{2}\s+\S+\s+(\d{4})", s)
+    if m:
+        mon = _RFC822_MONTHS.get(m.group(1).lower())
+        if mon:
+            try:
+                return date(int(m.group(3)), mon, int(m.group(2))).isoformat()
             except ValueError:
                 return None
 
@@ -290,31 +373,201 @@ def _kw_hit(kw: str, text: str) -> bool:
     return kw.lower() in text.lower()
 
 
-def match_keywords(item: dict, keywords: dict) -> list:
-    """걸린 include 키워드 목록. 빈 목록이면 탈락.
-    include 설정이 비어 있으면 필터를 끈 것으로 보고 ['*'] 를 돌려준다."""
-    title = item.get("title") or ""
-    if any(_kw_hit(x, title) for x in keywords.get("exclude") or []):
-        return []
-    include = keywords.get("include") or []
+# 키워드를 품고 있는 기관명. 본문에 '한국장애인고용공단' 이 적혀 있다고 '장애인 고용' 공고가 되지는
+# 않으므로 점수를 매기기 전에 지운다 (org 필드를 보지 않는 것과 같은 원칙).
+_INSTITUTION_RE = re.compile(
+    r"(한국)?(장애인고용공단|산업안전보건공단|안전보건공단|산업인력공단|고용정보원|산업안전보건교육원|"
+    r"장애인고용촉진|직업능력심사평가원|교육개발원|고용개발원|직업능력연구원|고용복지\+?센터|고용센터)"
+    r"|고용노동부|교육부|산업통상(자원)?부|중소벤처기업부|고용노동청")
+
+
+def _strip_institutions(text: str) -> str:
+    return _INSTITUTION_RE.sub(" ", text or "")
+
+
+def keyword_score(item: dict, keywords: dict):
+    """(점수, 걸린 키워드 목록, 걸린 제외어). 점수가 min_score 미만이거나 제외어가 있으면 탈락.
+
+    include 설정이 비어 있으면 필터를 끈 것으로 보고 (min_score, ['*'], None) 을 돌려준다.
+    include 가 단순 목록으로 와도(예전 설정·테스트) 가중치 1 로 본다."""
+    include = keywords.get("include") or {}
+    if isinstance(include, list):
+        include = {k: 1 for k in include}
+    min_score = int(keywords.get("min_score") or 1)
+    # 제외어는 제목과 분야에서 본다 — 개요까지 보면 '수출' 한 단어에 멀쩡한 교육 공고가 날아간다
+    head = " ".join(str(item.get(f) or "") for f in ("title", "field"))
+    for x in keywords.get("exclude") or []:
+        if _kw_hit(x, head):
+            return 0, [], x
     if not include:
-        return ["*"]
+        return min_score, ["*"], None
     # 기관명은 보지 않는다 — '고용' 이 '고용노동부' 에 걸려 그 부처 공지가 전부 통과한다
-    text = " ".join(str(item.get(f) or "") for f in
-                    ("title", "field", "target", "summary"))
-    return [k for k in include if _kw_hit(k, text)]
+    text = _strip_institutions(" ".join(str(item.get(f) or "") for f in
+                                        ("title", "field", "target", "summary")))
+    hits = [k for k in include if _kw_hit(k, text)]
+    return sum(include[k] for k in hits), hits, None
+
+
+def match_keywords(item: dict, keywords: dict) -> list:
+    """걸린 include 키워드 목록. 빈 목록이면 탈락. (keyword_score 의 호환용 껍데기)"""
+    score, hits, excluded = keyword_score(item, keywords)
+    if excluded or score < int(keywords.get("min_score") or 1):
+        return []
+    return hits
+
+
+# ── 지역 판정 ────────────────────────────────────────────────────────────
+
+# 광역지자체 → 표준 지역명. 2026 년 행정구역 개편으로 '전남광주통합특별시' 같은 이름도 들어온다.
+REGION_ALIASES = {
+    "서울": "서울", "서울특별시": "서울", "서울시": "서울",
+    "경기": "경기", "경기도": "경기",
+    "인천": "인천", "인천광역시": "인천", "인천시": "인천",
+    "부산": "부산", "부산광역시": "부산", "대구": "대구", "대구광역시": "대구",
+    "광주": "광주", "광주광역시": "광주", "대전": "대전", "대전광역시": "대전",
+    "울산": "울산", "울산광역시": "울산", "세종": "세종", "세종특별자치시": "세종", "세종시": "세종",
+    "강원": "강원", "강원도": "강원", "강원특별자치도": "강원",
+    "충북": "충북", "충청북도": "충북", "충남": "충남", "충청남도": "충남",
+    "전북": "전북", "전라북도": "전북", "전북특별자치도": "전북",
+    "전남": "전남", "전라남도": "전남", "전남광주": "전남·광주", "전남광주통합특별시": "전남·광주",
+    "경북": "경북", "경상북도": "경북", "경남": "경남", "경상남도": "경남",
+    "제주": "제주", "제주도": "제주", "제주특별자치도": "제주",
+    "수도권": "서울·경기·인천", "전국": "전국",
+}
+_REGION_SHORT = ["서울", "경기", "인천", "부산", "대구", "광주", "대전", "울산", "세종",
+                 "강원", "충북", "충남", "전북", "전남", "경북", "경남", "제주"]
+# 제목 안의 지역명 — '경기 침체' 같은 일반어와 섞이지 않게 뒤에 오는 글자를 제한한다
+_TITLE_REGION_RE = re.compile(
+    r"(?<![가-힣])(" + "|".join(_REGION_SHORT) + r")"
+    r"(?=특별|광역|지역|도\b|시\b|\s|[·ㆍ,/()\[\]]|$)")
+# 군(郡) 단위 지자체 전체 — 이름을 다 적어 두는 쪽이 '국군·장군' 같은 오탐을 막는다
+COUNTIES = (
+    "가평군 양평군 연천군 "
+    "홍천군 횡성군 영월군 평창군 정선군 철원군 화천군 양구군 인제군 고성군 양양군 "
+    "보은군 옥천군 영동군 증평군 진천군 괴산군 음성군 단양군 "
+    "금산군 부여군 서천군 청양군 홍성군 예산군 태안군 "
+    "완주군 진안군 무주군 장수군 임실군 순창군 고창군 부안군 "
+    "담양군 곡성군 구례군 고흥군 보성군 화순군 장흥군 강진군 해남군 영암군 무안군 함평군 "
+    "영광군 장성군 완도군 진도군 신안군 "
+    "군위군 의성군 청송군 영양군 영덕군 청도군 고령군 성주군 칠곡군 예천군 봉화군 울진군 울릉군 "
+    "의령군 함안군 창녕군 남해군 하동군 산청군 함양군 거창군 합천군 "
+    "기장군 달성군 강화군 옹진군 울주군"
+).split()
+_COUNTY_RE = re.compile(r"(?<![가-힣])(" + "|".join(COUNTIES) + r")(?![가-힣])")
+
+
+def _region_names(text: str) -> list:
+    """'[전남광주]', '[충남ㆍ충북ㆍ대전ㆍ세종]' 같은 표기를 표준 지역명 목록으로."""
+    out = []
+    for part in re.split(r"[·ㆍ,/\s]+", text or ""):
+        part = part.strip()
+        if not part:
+            continue
+        name = REGION_ALIASES.get(part)
+        if name:
+            out.extend(name.split("·"))
+    return out
+
+
+def detect_region(item: dict) -> dict:
+    """공고의 지역을 판정한다.
+
+    우선순위: 제목의 [지역] 표기 → 소관기관의 광역지자체명 → 제목 안의 지역명.
+    아무것도 없으면 중앙부처·공공기관 공고로 보고 '전국'. 군 단위 지자체명이 제목에 있으면
+    county 에 담는다(허용 지역이라도 걸러낼 수 있게)."""
+    title = item.get("title") or ""
+    org = item.get("org") or ""
+    regions = []
+    m = re.match(r"\s*\[([^\]]+)\]", title)
+    if m:
+        regions = _region_names(m.group(1))
+    if not regions:
+        head = re.split(r"[·ㆍ,/]", org)[0].strip()
+        if head in REGION_ALIASES and head != "전국":
+            regions = REGION_ALIASES[head].split("·")
+    if not regions:
+        regions = list(dict.fromkeys(mm.group(1) for mm in _TITLE_REGION_RE.finditer(title)))
+    county = _COUNTY_RE.search(title)
+    label = "전국" if not regions else "·".join(dict.fromkeys(regions))
+    return {"regions": regions or ["전국"], "label": label,
+            "county": county.group(1) if county else None}
+
+
+def region_allowed(item: dict, region_cfg: dict):
+    """(통과 여부, 탈락 사유). allow 가 비어 있으면 지역 필터를 끈 것이다."""
+    cfg = region_cfg or {}
+    allow = cfg.get("allow") or []
+    info = detect_region(item)
+    keep = int(cfg.get("keep_min_score") or 0)
+    if keep and (item.get("score") or 0) >= keep:
+        return True, None  # 우리 사업 그 자체인 공고는 지역을 가리지 않는다
+    if cfg.get("drop_county") and info["county"]:
+        return False, f"군 단위 공고({info['county']})"
+    if not allow:
+        return True, None
+    allowed = set()
+    for a in allow:
+        allowed.update(_region_names(a) or [a])
+    if any(r in allowed for r in info["regions"]):
+        return True, None
+    return False, f"지역 제외({info['label']})"
+
+
+# ── 마감일 추출 (공고 본문에서, 최선의 노력) ─────────────────────────────
+
+_DEADLINE_HEAD_RE = re.compile(
+    r"(접수|신청|제출|응모|공모|모집|참가\s*신청)\s*(기간|기한|마감|일정)|마감(일|일자)?")
+_DATE_RE = re.compile(r"(?:(\d{4})\s*[.\-/년]\s*)?(\d{1,2})\s*[.\-/월]\s*(\d{1,2})\s*(?:일|\.)?")
+
+
+def extract_deadline(text: str, ref_year: int):
+    """본문에서 '접수기간 … ~ 10. 31.(금)' 류의 마지막 날짜를 ISO 로. 못 찾으면 None.
+
+    추정값을 만들어 내지 않는다 — 날짜 표기를 실제로 찾았을 때만 돌려준다."""
+    if not text:
+        return None
+    for m in _DEADLINE_HEAD_RE.finditer(text):
+        window = text[m.end():m.end() + 90]
+        dates = list(_DATE_RE.finditer(window))
+        if not dates:
+            continue
+        year = None
+        for d in dates:
+            if d.group(1):
+                year = int(d.group(1))
+        last = dates[-1]
+        y = int(last.group(1)) if last.group(1) else (year or ref_year)
+        try:
+            return date(y, int(last.group(2)), int(last.group(3))).isoformat()
+        except ValueError:
+            continue
+    return None
 
 
 # ── 기업마당 공개 목록 (키가 없을 때) ────────────────────────────────────
 
+PUBLIC_HEADERS = {"User-Agent": PUBLIC_UA, "Accept-Language": "ko-KR,ko;q=0.9,en;q=0.5"}
+
+
+def _decode_html(resp) -> str:
+    """응답 문자셋을 제대로 고른다. 기업마당은 UTF-8 이지만 한국산업인력공단은 EUC-KR 이라
+    utf-8 로 못 박으면 전부 깨진다. 헤더 → <meta charset> → 추정 순."""
+    enc = (resp.encoding or "").lower()
+    if not enc or enc in ("iso-8859-1", "ascii"):
+        m = re.search(rb'charset=["\']?([\w-]+)', resp.content[:4000], re.I)
+        enc = m.group(1).decode("ascii", "ignore") if m else (resp.apparent_encoding or "utf-8")
+    try:
+        return resp.content.decode(enc, errors="replace")
+    except LookupError:
+        return resp.content.decode("utf-8", errors="replace")
+
+
 def _get_html(url: str, params: dict = None, timeout: int = 25) -> str:
     for attempt in range(3):
         try:
-            resp = requests.get(url, params=params, timeout=timeout,
-                                headers={"User-Agent": PUBLIC_UA})
+            resp = requests.get(url, params=params, timeout=timeout, headers=PUBLIC_HEADERS)
             resp.raise_for_status()
-            resp.encoding = "utf-8"
-            return resp.text
+            return _decode_html(resp)
         except requests.RequestException:
             if attempt == 2:
                 raise
@@ -549,11 +802,222 @@ def fetch_moel(cfg: dict, label: str) -> list:
     return out
 
 
+def _page_text(html: str) -> str:
+    """상세 페이지 HTML → 본문 텍스트. script/style 을 먼저 들어내고 태그를 지운다."""
+    html = re.sub(r"<(script|style)[^>]*>.*?</\1>", " ", html or "", flags=re.S | re.I)
+    return _clean(html)
+
+
+def _public_pages(fetch_page, cfg: dict, label: str, now: datetime) -> list:
+    """등록일 최신순 공개 목록을 days 안쪽까지만 넘겨 읽는다.
+
+    fetch_page(page) → 정규화 항목 목록. 한 쪽이 통째로 기간 밖이면 멈춘다."""
+    cutoff = (now - timedelta(days=cfg.get("days", 7))).date().isoformat()
+    out = []
+    for page in range(1, LIST_MAX_PAGES + 1):
+        rows = fetch_page(page)
+        if not rows:
+            break
+        out.extend(r for r in rows if (r["pubdate_iso"] or "9") >= cutoff)
+        if all((r["pubdate_iso"] or "9") < cutoff for r in rows):
+            break
+        time.sleep(PUBLIC_DELAY)
+    print(f"[gov] {label}: 공개 목록에서 {len(out)}건 읽음", file=sys.stderr)
+    return out[:cfg.get("max_items", 100)]
+
+
+def _enrich_from_detail(items: list, cfg: dict, keywords: dict, now: datetime,
+                        parse_detail) -> list:
+    """키워드에 걸린 공고만 상세 페이지를 읽어 개요·마감일을 채운다(요청 수를 줄이기 위해).
+
+    parse_detail(text, item) → (summary, period_end). 실패해도 공고를 버리지 않는다.
+    목록에는 개요가 없어 제목만으로 점수를 매기면 모자랄 수 있다. 그래서 제외어에 걸리지 않고
+    키워드가 하나라도 걸린 공고는 모두 상세를 읽고, 최종 판정은 collect() 가 개요까지 보고 한다."""
+    def candidate(it):
+        score, hits, excluded = keyword_score(it, keywords)
+        return not excluded and (score > 0 or hits == ["*"])
+    matched = [it for it in items if candidate(it)]
+    known = {it.get("k") for it in load_archive()["items"]}
+    todo = [it for it in matched if _key(it) not in known][:cfg.get("detail_max", 30)]
+    for it in todo:
+        try:
+            text = _page_text(_get_html(it["link"]))
+            summary, end = parse_detail(text, it)
+            it["summary"] = summary or it.get("summary") or ""
+            if end and end >= (now - timedelta(days=60)).date().isoformat():
+                it["period_end"] = end
+        except requests.RequestException:
+            pass
+        time.sleep(PUBLIC_DELAY)
+    return matched
+
+
+def _detail_summary_and_end(text: str, now: datetime, title: str = ""):
+    """상세 본문 텍스트에서 (개요 400자, 마감일). 제목·메타 줄을 지나 본문부터 담는다."""
+    body = text
+    if title:
+        full = re.sub(r"\s+", " ", title.strip())
+        i = text.find(full[:20])
+        if i >= 0:
+            body = text[i:]
+            # 제목 전체가 이어지면 통째로 지운다. 20자만 지우면 제목 꼬리가 개요 앞에 남는다.
+            body = body[len(full):] if body.startswith(full) else body[len(full[:20]):]
+    body = re.sub(r"(담당부서|등록일|조회수|첨부파일|공지구분)\s*[:：]?\s*\S+", " ", body)
+    body = re.sub(r"\s+", " ", body).strip()
+    return body[:400], extract_deadline(text, now.year)
+
+
+def parse_kead_list(html: str, label: str) -> list:
+    """한국장애인고용공단 공지사항 표 → 정규화 항목.
+    열: 번호 · 제목(fn_bbsView('<id>')) · 담당부서 · 등록일 · 첨부 · 조회"""
+    m = re.search(r"<tbody[^>]*>(.*?)</tbody>", html, re.S)
+    if not m:
+        return []
+    out = []
+    for row in re.findall(r"<tr[^>]*>(.*?)</tr>", m.group(1), re.S):
+        pid = re.search(r"fn_bbsView\('(\d+)'\)", row)
+        tds = [_clean(t) for t in re.findall(r"<td[^>]*>(.*?)</td>", row, re.S)]
+        if not pid or len(tds) < 4:
+            continue
+        dates = [t for t in tds if re.fullmatch(r"\d{4}-\d{2}-\d{2}", t)]
+        out.append({
+            "title": tds[1],
+            "link": KEAD_DETAIL.format(pid.group(1)),
+            "source": label,
+            "org": "한국장애인고용공단" + (f" · {tds[2]}" if tds[2] and not re.fullmatch(r"\d{4}-\d{2}-\d{2}", tds[2]) else ""),
+            "field": "",
+            "target": "",
+            "budget": "",
+            "summary": "",
+            "period_start": None,
+            "period_end": None,
+            "pubdate_iso": parse_date(dates[0]) if dates else None,
+        })
+    return out
+
+
+def fetch_kead(cfg: dict, label: str, now: datetime, keywords: dict) -> list:
+    rows = _public_pages(
+        lambda page: parse_kead_list(_get_html(KEAD_LIST, {"menuId": KEAD_MENU, "pageIndex": page}), label),
+        cfg, label, now)
+    return _enrich_from_detail(rows, cfg, keywords, now,
+                               lambda text, it: _detail_summary_and_end(text, now, it["title"]))
+
+
+def parse_hrdkorea_list(html: str, label: str) -> list:
+    """한국산업인력공단 공지사항 표 → 정규화 항목. 열: 번호 · 제목(?k=<번호>) · 등록일"""
+    m = re.search(r"<tbody[^>]*>(.*?)</tbody>", html, re.S)
+    if not m:
+        return []
+    out = []
+    for row in re.findall(r"<tr[^>]*>(.*?)</tr>", m.group(1), re.S):
+        pid = re.search(r"[?&]k=(\d+)", row)
+        tds = [_clean(t) for t in re.findall(r"<td[^>]*>(.*?)</td>", row, re.S)]
+        if not pid or len(tds) < 3:
+            continue
+        out.append({
+            "title": tds[1],
+            "link": HRDK_DETAIL.format(pid.group(1)),
+            "source": label,
+            "org": "한국산업인력공단",
+            "field": "",
+            "target": "",
+            "budget": "",
+            "summary": "",
+            "period_start": None,
+            "period_end": None,
+            "pubdate_iso": parse_date(tds[2]),
+        })
+    return out
+
+
+def fetch_hrdkorea(cfg: dict, label: str, now: datetime, keywords: dict) -> list:
+    rows = _public_pages(
+        lambda page: parse_hrdkorea_list(_get_html(HRDK_LIST, {"pageNo": page}), label),
+        cfg, label, now)
+    return _enrich_from_detail(rows, cfg, keywords, now,
+                               lambda text, it: _detail_summary_and_end(text, now, it["title"]))
+
+
+def _kosha_payload(bbs_id: str, page: int, rows: int) -> dict:
+    """안전보건공단 표준게시판 'basicAccess'(목록 조회) 요청 본문. 사이트 스크립트가 보내는 모양 그대로."""
+    common = {"frontInfo": {"viewId": "", "menuId": "", "siteId": ""}, "frontAuthKey": "",
+              "auth": {}, "securityInfo": {},
+              "data": {"pagingInfo": None, "whereId": None,
+                       "tboard": {"systemCd": "50", "channel": "web", "bbsId": bbs_id,
+                                  "bbsGrpId": "", "serviceId": "basicAccess"}}}
+    cnd = {"curPageCo": page, "recodePageCo": rows, "rowsPerPage": rows, "pstSeCd": "1200001",
+           "atcflCntSrchYn": "N", "artclNoList": [], "pstNoOrder": "Y", "isDesc": "Y",
+           "sortType": "01", "sortOrder": "1", "isAddPstCn": "N"}
+    service = {"info": {"id": "", "type": ""},
+               "data": {"searchDefaultCndGrid": [cnd], "searchArtclCndGrid": []}}
+    from urllib.parse import quote
+    return {"_JSON": quote(json.dumps({"common": common, "service": service}, ensure_ascii=False), safe="")}
+
+
+def parse_kosha_posts(payload: dict, bbs_id: str, board_name: str, label: str) -> list:
+    """게시판 조회 응답(response.bbsPstGrid) → 정규화 항목. 고정 공지(pstSeCd 1200002)는 뺀다."""
+    resp = (payload or {}).get("response") or {}
+    out = []
+    for p in resp.get("bbsPstGrid") or []:
+        title = _clean(p.get("pstNm"))
+        if not title or p.get("pstSeCd") == "1200002" or not p.get("pstNo"):
+            continue
+        out.append({
+            "title": title,
+            "link": KOSHA_DETAIL.format(bbs_id, p["pstNo"]),
+            "source": label,
+            "org": "한국산업안전보건공단" + (f" · {board_name}" if board_name else ""),
+            "field": "",
+            "target": "",
+            "budget": "",
+            "summary": "",
+            "period_start": None,
+            "period_end": None,
+            "pubdate_iso": parse_date(p.get("regYmd") or (p.get("frstRegDt") or "")[:8]),
+        })
+    return out
+
+
+def fetch_kosha(cfg: dict, label: str, now: datetime) -> list:
+    """게시판별로 최신 50건을 받아 days 안쪽만 남긴다. 응답은 pstNo 내림차순이 보장되지 않아
+    날짜로 직접 거른다."""
+    cutoff = (now - timedelta(days=cfg.get("days", 7))).date().isoformat()
+    out = []
+    for board in cfg.get("boards") or []:
+        bbs_id, name = board.get("id"), board.get("name", "")
+        if not bbs_id:
+            continue
+        payload = None
+        for attempt in range(3):
+            try:
+                resp = requests.post(KOSHA_API, data=_kosha_payload(bbs_id, 1, KOSHA_PAGE_ROWS),
+                                     headers=KOSHA_HEADERS, timeout=25)
+                resp.raise_for_status()
+                payload = resp.json()
+                break
+            except (requests.RequestException, ValueError):
+                if attempt == 2:
+                    raise APIResponseError(f"안전보건공단 게시판({name}) 조회 실패")
+                time.sleep(2 * (attempt + 1))
+        if str((payload or {}).get("code", 0)) not in ("0", "00"):
+            raise APIResponseError(f"안전보건공단 게시판({name}) 응답 오류 — 게시판 ID 를 확인하세요")
+        rows = [r for r in parse_kosha_posts(payload, bbs_id, name, label)
+                if (r["pubdate_iso"] or "9") >= cutoff]
+        print(f"[gov] {label} {name}: 최근 {len(rows)}건", file=sys.stderr)
+        out.extend(rows)
+        time.sleep(PUBLIC_DELAY)
+    return out[:cfg.get("max_items", 150)]
+
+
 FETCHERS = {
     "bizinfo": lambda cfg, label, now, kw: fetch_bizinfo(cfg, label, now, kw),
     "kstartup": lambda cfg, label, now, kw: fetch_kstartup(cfg, label),
     "g2b": lambda cfg, label, now, kw: fetch_g2b(cfg, label, now),
     "moel": lambda cfg, label, now, kw: fetch_moel(cfg, label),
+    "kead": lambda cfg, label, now, kw: fetch_kead(cfg, label, now, kw),
+    "hrdkorea": lambda cfg, label, now, kw: fetch_hrdkorea(cfg, label, now, kw),
+    "kosha": lambda cfg, label, now, kw: fetch_kosha(cfg, label, now),
 }
 
 
@@ -619,6 +1083,12 @@ def _atomic_write(path: str, text: str) -> None:
     os.replace(tmp, path)
 
 
+def _keyword_list(keywords: dict) -> list:
+    """아카이브 문서에 적는 키워드 목록 — 가중치 사전이든 목록이든 이름만."""
+    include = (keywords or {}).get("include") or []
+    return list(include.keys()) if isinstance(include, dict) else list(include)
+
+
 def write_archive(current: list, issue_key: str, gov_dir: str, keywords: dict = None) -> list:
     """아카이브(archive.json)에 합치고, 대시보드용 data.js 와 주차 스냅샷을 쓴다.
 
@@ -633,7 +1103,7 @@ def write_archive(current: list, issue_key: str, gov_dir: str, keywords: dict = 
     doc = {
         "updated": datetime.now(KST).isoformat(timespec="seconds"),
         "issue_key": issue_key,
-        "keywords": (keywords or {}).get("include") or [],
+        "keywords": _keyword_list(keywords),
         "items": items,
     }
     body = json.dumps(doc, ensure_ascii=False, separators=(",", ":"))
@@ -675,6 +1145,11 @@ def update_store(items: list, today: date, issue_key: str, path: str = STORE_PAT
             "summary": it.get("summary") or (prev or {}).get("summary", ""),
             "field": it.get("field", ""),
             "kw": it.get("kw") or [],
+            "score": it.get("score", 0),
+            "region": it.get("region") or detect_region(it)["label"],
+            # 마감일이 구조화된 소스가 아니면 '상시'가 아니라 '원문 확인'으로 보여 준다
+            "deadline": "known" if it.get("period_end") else (
+                "open" if it.get("source_id") in STRUCTURED_DEADLINE_SOURCES else "unknown"),
             "start": it.get("period_start"),
             "end": it.get("period_end"),
             # 처음 본 날짜는 유지한다 — '이번 주 신규' 판정 기준이다
@@ -721,14 +1196,18 @@ def collect(mock_dir: str = None, now: datetime = None, config: dict = None,
     신규 = 주차 페이지·카톡 메시지에 실릴 것
     전체 = 공개 대시보드가 보여줄 것 (마감 안 지난 누적분)
 
-    한 소스가 실패해도 나머지로 계속 진행한다 — 4개 중 하나 때문에
+    한 소스가 실패해도 나머지로 계속 진행한다 — 7개 중 하나 때문에
     그 주 발행 전체가 멈추면 안 된다.
+
+    걸러낸 건수는 collect.last_stats 에 남긴다(관리 대시보드·로그용).
     """
     now = now or datetime.now(KST)
     today = now.date()
     cfg = config or load_config()
     days = cfg.get("days", 7)
-    keywords = cfg.get("keywords") or {}
+    keywords = normalize_keywords(cfg.get("keywords") or {})
+    region_cfg = cfg.get("region") or {}
+    min_left = int(cfg.get("min_days_left") or 0)
 
     raw, errors = [], []
     for name, scfg in cfg["sources"].items():
@@ -747,6 +1226,8 @@ def collect(mock_dir: str = None, now: datetime = None, config: dict = None,
                     it.setdefault("source", label)
             else:
                 items = FETCHERS[name](scfg, label, now, keywords)
+            for it in items:
+                it["source_id"] = name
             print(f"[gov] {label}: {len(items)}건 수집", file=sys.stderr)
             raw.extend(items)
         except MissingKey as e:
@@ -756,17 +1237,41 @@ def collect(mock_dir: str = None, now: datetime = None, config: dict = None,
             print(f"[gov] {label} 수집 실패: {e}", file=sys.stderr)
             errors.append(label)
 
-    # 키워드 필터 — 걸린 키워드를 항목에 남겨 대시보드에서 키워드별로 볼 수 있게 한다
-    matched = []
+    # 1) 키워드 점수 — 걸린 키워드와 점수를 항목에 남겨 대시보드·픽 선정에 쓴다
+    matched, dropped_kw, dropped_ex = [], 0, {}
     for it in raw:
-        it["kw"] = match_keywords(it, keywords)
-        if it["kw"]:
-            matched.append(it)
+        score, hits, excluded = keyword_score(it, keywords)
+        it["kw"], it["score"] = hits, score
+        if excluded:
+            dropped_ex[excluded] = dropped_ex.get(excluded, 0) + 1
+            continue
+        if score < keywords["min_score"]:
+            dropped_kw += 1
+            continue
+        matched.append(it)
+    ex_note = ", ".join(f"{k} {v}" for k, v in sorted(dropped_ex.items(), key=lambda kv: -kv[1])[:8])
     print(f"[gov] 키워드 필터: {len(raw)}건 → {len(matched)}건 "
-          f"(키워드 {len(keywords.get('include') or [])}개)", file=sys.stderr)
+          f"(키워드 {len(keywords['include'])}개, 기준 점수 {keywords['min_score']}, "
+          f"점수 미달 {dropped_kw}건, 제외어 {sum(dropped_ex.values())}건"
+          f"{' — ' + ex_note if ex_note else ''})", file=sys.stderr)
 
-    # 마감 지난 공고 제외
-    alive = [it for it in matched
+    # 2) 지역 — 전국·허용 지역만, 군 단위 제외
+    regional, dropped_region = [], {}
+    for it in matched:
+        it["region"] = detect_region(it)["label"]
+        ok, why = region_allowed(it, region_cfg)
+        if ok:
+            regional.append(it)
+        else:
+            key = why.split("(")[0]
+            dropped_region[key] = dropped_region.get(key, 0) + 1
+    if region_cfg.get("allow") or region_cfg.get("drop_county"):
+        print(f"[gov] 지역 필터: {len(matched)}건 → {len(regional)}건 "
+              f"(허용 {', '.join(region_cfg.get('allow') or ['전체'])}"
+              + "".join(f" · {k} {v}건" for k, v in dropped_region.items()) + ")", file=sys.stderr)
+
+    # 3) 마감 지난 공고 제외
+    alive = [it for it in regional
              if not (it.get("period_end") and it["period_end"] < today.isoformat())]
 
     # 이번 실행 안에서의 중복 제거 (같은 공고가 여러 소스에 뜨는 경우 포함)
@@ -784,6 +1289,16 @@ def collect(mock_dir: str = None, now: datetime = None, config: dict = None,
     seen = load_seen(state_path)
     fresh = [it for it in unique if _key(it) not in seen]
 
+    # 4) 마감이 코앞인 공고는 신규(주차 페이지·카톡)에서 뺀다 — 받아 볼 때는 이미 늦다.
+    #    모아보기에는 남고(update_store), 다음 주엔 마감돼 있으므로 다시 올라오지도 않는다.
+    soon = []
+    if min_left > 0:
+        limit = (today + timedelta(days=min_left)).isoformat()
+        soon = [it for it in fresh if it.get("period_end") and it["period_end"] < limit]
+        fresh = [it for it in fresh if it not in soon]
+        if soon:
+            print(f"[gov] 마감 {min_left}일 미만 {len(soon)}건은 이번 주 소식에서 뺌", file=sys.stderr)
+
     fresh.sort(key=_sort_key)
 
     if commit_state:
@@ -791,8 +1306,18 @@ def collect(mock_dir: str = None, now: datetime = None, config: dict = None,
             seen[_key(it)] = today.isoformat()
         save_seen(seen, today, state_path)
 
-    print(f"[gov] 수집 {len(raw)}건 → 유효 {len(alive)}건 → 중복제거 {len(unique)}건 "
-          f"→ 신규 {len(fresh)}건 (최근 {days}일 기준)", file=sys.stderr)
+    print(f"[gov] 수집 {len(raw)}건 → 키워드 {len(matched)}건 → 지역 {len(regional)}건 "
+          f"→ 유효 {len(alive)}건 → 중복제거 {len(unique)}건 → 신규 {len(fresh)}건 "
+          f"(최근 {days}일 기준)", file=sys.stderr)
+    collect.last_stats = {
+        "raw": len(raw), "keyword": len(matched), "region": len(regional), "alive": len(alive),
+        "unique": len(unique), "fresh": len(fresh), "soon_dropped": len(soon),
+        "dropped_by_exclude": dropped_ex, "dropped_by_region": dropped_region,
+        "dropped_low_score": dropped_kw,
+    }
 
     active = update_store(unique, today, issue_key or today.isoformat(), store_path, keywords)
     return fresh, errors, active
+
+
+collect.last_stats = {}

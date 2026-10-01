@@ -24,10 +24,31 @@ Actions 가 8주 연속 실패했기 때문이다. workflow 의 schedule 은 주
 PC 가 월요일에 꺼져 있었으면 다음 로그온 때 따라잡는다. 같은 주에는 한 번만 수집한다
 (`windows/collect_state.json`). 로그는 `windows/collect.log`.
 
-## 키워드와 아카이브
+## 키워드·지역·마감 필터와 아카이브
 
-- 키워드는 `config/gov_sources.json` 의 `keywords.include / exclude`. 고치면 다음 수집부터 반영.
-  영문 키워드(AI·DX)는 단어 경계로, 한글은 부분 일치로 본다. 기관명은 매칭에서 뺐다.
+- 필터는 전부 `config/gov_sources.json`. 고치면 다음 수집부터 반영. 2026-09-30 개편:
+  - `keywords.include` 는 **가중치 사전**(3/2/1)이고 합이 `min_score`(2) 이상이면 통과. 예전 목록 형식도 읽힌다.
+  - `keywords.exclude` 는 제목·분야에만 적용(개요까지 보면 멀쩡한 공고가 날아간다).
+  - `region.allow`(전국·서울·경기·인천) + `drop_county`(군 단위 제외) + `keep_min_score`(6점 이상은 지역 불문 유지).
+  - `min_days_left`(3): 마감 3일 미만은 신규(주차 페이지·카톡)에서만 뺀다. 모아보기에는 남는다.
+  - 영문 키워드(AI·DX)는 단어 경계로, 한글은 부분 일치로 본다. 기관명(org)과 본문 속 기관명
+    (`_INSTITUTION_RE`: 장애인고용공단·안전보건공단 …)은 매칭에서 뺀다 — 기관명의 '고용'·'안전' 때문에 다 통과하는 걸 막는다.
+  - 걸러낸 건수는 `collect_gov.collect.last_stats` 와 stderr 로그에 남는다.
+- 출처 7곳: 기업마당·K-Startup·나라장터·고용노동부 RSS + **장애인고용공단(kead)·한국산업인력공단(hrdkorea)·안전보건공단(kosha)**.
+  - kead·hrdkorea 는 공개 목록 HTML(10건/쪽)을 days 안쪽까지 넘겨 읽고, 키워드가 하나라도 걸린 공고만 상세를 읽어
+    개요·접수기간을 뽑는다(0.5초 간격, `detail_max`).
+  - **hrdkorea 는 EUC-KR 이고 날짜를 자바 `Date.toString()`('Mon Sep 21 … KST 2026')으로 찍는다.**
+    `_decode_html` 이 문자셋을 고르고 `parse_date` 가 그 형식을 읽는다. `Accept-Language: ko-KR` 를 보내야 한다.
+  - kosha 는 Vue SPA 라 HTML 목록이 없다. 사이트 스크립트가 쓰는 표준게시판 API
+    (`POST /api/compn24/auth/stdtboard/process.do`, 폼 필드 `_JSON`, 헤더 `chnlId: kosha24`, serviceId `basicAccess`)를
+    그대로 호출한다. 토큰 없이 공개 게시판이 읽힌다(2026-09-30 확인). 상세 링크는
+    `/notification/notice/contruction?bbsId=…&pstNo=…`. 게시판 ID 는 `boards[]` 에 있고 개편 시 바뀔 수 있다.
+  - HRD4U(hrd4u.or.kr) 게시판은 robots.txt 가 봇의 `/hrd4u_new/bbs/` 수집을 막아 넣지 않았다. 고용24(work24) 공지는
+    POST 폼 기반이라 보류.
+- 마감일이 구조화된 출처(bizinfo·kstartup·g2b)가 아니면 마감일이 비었을 때 '상시'가 아니라 **'마감 원문 확인'**으로
+  표시한다(`deadline` 필드 known/open/unknown). 모르는 것을 상시라고 적지 않는다.
+- 카톡 기본 스타일은 `picks`("이번주 픽 5건", `src/message.py`). 첫 줄은 반드시 주차 페이지 링크 — 카카오톡은 첫 링크로
+  미리보기 카드를 만든다. 픽은 점수 → 마감 임박 → 최근 게시 순.
 - `docs/gov/archive.json` 은 **지우지 않는 누적본**(마감 공고 포함),
   `docs/gov/archive/<날짜>.json` 은 주차 스냅샷. `data.json` 은 진행 중만.
 - 대시보드는 `data.js`(archive 와 같은 내용)를 `<script>` 로 읽는다 —
@@ -40,7 +61,7 @@ PC 가 월요일에 꺼져 있었으면 다음 로그온 때 따라잡는다. �
 |---|---|
 | `src/categories.py` | 카테고리 레지스트리 — 문구·색·최소건수는 **전부 여기** |
 | `src/collect.py` | 네이버 뉴스 수집 |
-| `src/collect_gov.py` | 공고 4개 소스 수집·정규화·신규 판정·누적 저장소 |
+| `src/collect_gov.py` | 공고 7개 소스 수집·정규화·키워드 점수·지역·신규 판정·누적 저장소 |
 | `src/main.py` | 오케스트레이터 |
 | `src/message.py` | 방별 카톡 메시지 조립 |
 | `src/theme.py` | **공통 디자인 시스템** — 주차 페이지와 대시보드가 함께 씀 |
@@ -57,6 +78,8 @@ PC 가 월요일에 꺼져 있었으면 다음 로그온 때 따라잡는다. �
 python -m src.main --mock              # 키 없이 fixtures 로 전 구간
 python -m src.main --only gov          # 공고만
 python -m src.main --no-state          # '이미 보낸 공고' 기록 안 남김
+python -m src.main --only gov --no-state --out C:\temp\preview   # docs/ 안 건드리고 미리보기
+python -m unittest tests.test_gov_filters tests.test_gov_api_contract && node tests/gov-dashboard.test.cjs
 python windows/kakao_send.py --local --dry-run   # 전송 없이 대상 확인
 powershell -ExecutionPolicy Bypass -File windows\start_dashboard.ps1
 ```
@@ -95,6 +118,8 @@ powershell -ExecutionPolicy Bypass -File windows\start_dashboard.ps1
 ## 배포
 
 명령줄 `git push` 가 된다(Git Credential Manager 에 로그인 정보가 있음, 2026-09-28 확인).
+**원격(GitHub)에 다른 곳에서 올린 커밋이 있으면 PC 의 `run_collect.ps1` push 가 거부된다** — 그 스크립트는
+pull 을 하지 않는다. 코드를 다른 환경에서 고쳐 올렸으면 PC 의 `C:\Users\user\modu-news` 에서 먼저 `git pull` 할 것.
 `gh` CLI 는 미인증. 주간 수집 스크립트가 docs/ 를 자동으로 올린다 — 실패하면 `windows/collect.log` 에 경고가 남는다.
 
 ## 남은 작업
