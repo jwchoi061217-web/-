@@ -79,6 +79,28 @@ class TagTests(unittest.TestCase):
         self.assertEqual(gov_tags.region_evidence(item("전국 공고", org="고용노동부")), "")
         self.assertTrue(gov_tags.region_preference(item("x", summary="부산 지역 기업 가점 부여")))
 
+    def test_consortium_reads_g2b_joint_contract_wording(self):
+        # 나라장터 상세의 공동계약 표기: (없음)공동수급불허 · (전자)공동이행 · (전자)분담이행 · 지역의무공동도급
+        self.assertEqual(gov_tags.detect_consortium(item("용역", target="업종: 이러닝서비스업 · 공동수급 불허(단독 참여)"))["status"], "불가")
+        self.assertEqual(gov_tags.detect_consortium(item("용역", target="공동수급 가능(공동이행)"))["status"], "가능")
+        self.assertEqual(gov_tags.detect_consortium(item("용역", target="공동수급 가능(공동이행 또는 분담이행)"))["status"], "가능")
+        self.assertEqual(gov_tags.detect_consortium(item("공사", target="지역의무공동도급: 경기 49%"))["status"], "필수")
+        self.assertEqual(gov_tags.detect_consortium(item("공사", summary="공동도급 관련 사항은 공고서 참조"))["status"], "확인")
+
+    def test_institution_names_in_titles_do_not_score(self):
+        # 나라장터 공고명에는 발주 기관이 그대로 들어간다 — '창녕교육지원청 통학버스 구매' 가 '교육' 공고가 되면 안 된다
+        kw = gov.normalize_keywords(self.cfg["keywords"], self.cfg["fields"])
+        for title in ("창녕교육지원청 통학버스(중형승합차) 구매", "중앙교육연수원 생태환경 개선 조경 이식공사",
+                      "2027년 강원특별자치도교육청 달력 제작 및 배부", "삼성현초등학교 급식실 후드 교체", "육군훈련소 식자재 납품"):
+            score, hits, _ = gov.keyword_score(item(title), kw)
+            self.assertEqual(hits, [], title)
+        # 기관명을 지워도 공고 자체가 교육이면 남는다
+        score, hits, _ = gov.keyword_score(item("2026학년도 김천교육지원청 디지털 역량강화 교육 프로그램 운영 용역"), kw)
+        self.assertIn("교육", hits)
+        self.assertIn("역량강화", hits)
+        # 대시보드 JS 가 같은 패턴을 받는다 — JS 에 없는 문법(룩비하인드)이 섞이면 안 된다
+        self.assertNotIn("(?<", gov._INSTITUTION_RE.pattern)
+
     def test_annotate_fills_every_tag_field_and_rules_ship_to_dashboard(self):
         it = gov_tags.annotate(item("AI 교육 공급기업 모집", score=4), self.cfg)
         for k in ("fields", "roles", "relevance", "consortium", "size_req", "quals", "region_text", "region_pref"):

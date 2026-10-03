@@ -195,5 +195,130 @@ class G2bAdapterTests(unittest.TestCase):
         self.assertIn("교육", cfg["sources"]["g2b"]["search_terms"])
 
 
+WEB = json.load(open(os.path.join(os.path.dirname(__file__), "fixtures", "gov_g2b_web_detail.json"), encoding="utf-8"))
+
+
+class FakeWebSession:
+    """상세 XHR(selectItemAnncMngV.do) 흉내. 공고번호별 응답을 돌려주고 호출을 센다."""
+
+    def __init__(self, answers, fail_first=0):
+        self.answers, self.calls, self.fail_first = answers, [], fail_first
+
+    def post(self, url, headers=None, data=None, timeout=None):
+        body = json.loads(data)["dmItemMap"]
+        self.calls.append((url, body["bidPbancNo"], body["bidPbancOrd"]))
+        if self.fail_first:
+            self.fail_first -= 1
+            raise requests.ConnectionError("reset by peer")
+        payload = self.answers.get(body["bidPbancNo"], WEB["missing"])
+
+        class R:
+            def json(self_inner):
+                return payload
+        return R()
+
+
+class G2bWebDetailTests(unittest.TestCase):
+    """키 없는 반자동 경로 — 브라우저 내보내기 + 세션 없이 열리는 상세 XHR (2026-10-03 실물 응답을 줄인 픽스처)."""
+
+    def test_detail_becomes_item_with_region_industry_consortium_and_deadline(self):
+        it = g2b.normalize_web_detail(WEB["servc"], "나라장터")
+        self.assertEqual(it["title"], "(재공고)2026년 독서통신 교육 위탁 용역(단가계약)")   # &#40; 엔티티를 푼다
+        self.assertEqual(it["link"], "https://www.g2b.go.kr/link/PNPE027_01/single/?bidPbancNo=R26BK01755920&bidPbancOrd=000")
+        self.assertEqual((it["org"], it["field"], it["kind"], it["bid_no"]), ("인천시설공단", "용역", "servc", "R26BK01755920-000"))
+        self.assertEqual(it["budget"], "약 6,240만원")
+        self.assertEqual((it["period_start"], it["period_end"], it["pubdate_iso"]), ("2026-10-02", "2026-10-12", "2026-10-02"))
+        # 정의서 5-1 순서: 지역 → 소재지 기준 → 업종 → 공동수급. 지역은 표준 지역명으로도 적는다(대시보드 판정용)
+        self.assertEqual(it["target"], "지역제한: 서울특별시·인천광역시·경기도 · 소재지 판단: 본사소재지 · 업종: 평생교육시설(원격) · 공동수급 불허(단독 참여)")
+        self.assertEqual(it["region"], "서울·인천·경기")
+        self.assertEqual(it["industry"], "평생교육시설(원격)")
+        self.assertIn("재공고", it["summary"])
+        self.assertIn("계약: 일반단가계약", it["summary"])
+        self.assertIn("입찰서 접수 2026-10-02 20:00 ~ 2026-10-12 10:00", it["summary"])   # 기간은 게시일~마감, 접수 창은 개요에
+        self.assertIn("개찰 2026-10-12 11:00", it["summary"])
+        self.assertIn("담당 재무정보실", it["summary"])
+        self.assertNotIn("홍**", json.dumps(it, ensure_ascii=False))                    # 담당자 이름은 싣지 않는다
+        # 꼬리표가 target 의 문구를 읽어 낸다
+        from src import gov_tags
+        self.assertEqual(gov_tags.detect_consortium(it)["status"], "불가")
+        self.assertIn("지역제한", gov_tags.region_evidence(it))
+
+    def test_goods_notice_with_reference_only_limits_is_not_guessed(self):
+        it = g2b.normalize_web_detail(WEB["thng"], "나라장터")
+        self.assertEqual((it["field"], it["kind"]), ("물품", "thng"))
+        self.assertIn("지역제한: 공고서 참조(원문 확인)", it["target"])
+        self.assertIn("업종: 공고서 참조(원문 확인)", it["target"])
+        self.assertNotIn("region", it)                                               # 모르면 비워 둔다 → collect 가 판정
+        self.assertIn("품명: 컴퓨터서버", it["summary"])
+
+    def test_missing_notice_returns_none_and_list_row_fills_in(self):
+        self.assertIsNone(g2b.normalize_web_detail(WEB["missing"], "나라장터", "2026SCQ011038603", "02"))
+        row = {"no": "2026SCQ011038603", "ord": "02", "title": "26-평 안보교육 외부시설물 안전점검 용역", "org": "국방부 해군제2함대사령부",
+               "dmst": "제9911부대", "post": "2026/10/02 09:00", "close": "2026/10/12 10:00", "kind": "일반용역", "stts": "재공고",
+               "method": "최저가낙찰제", "bgt": 0, "prsp": 0, "link": "http://www.d2b.go.kr/psb/bid/serviceBidAnnounceList.do"}
+        it = g2b.normalize_web_list_row(row, "나라장터")
+        self.assertEqual(it["org"], "국방부 해군제2함대사령부 · 제9911부대")
+        self.assertEqual((it["period_start"], it["period_end"]), ("2026-10-02", "2026-10-12"))
+        self.assertEqual(it["budget"], "")
+        self.assertEqual(it["target"], "참가 조건: 원문 확인(연계기관 공고)")
+        # 목록 주소 하나뿐인 연계기관 공고는 공고번호를 조각으로 붙여 식별자를 갈라 둔다
+        self.assertEqual(it["link"], "http://www.d2b.go.kr/psb/bid/serviceBidAnnounceList.do#2026SCQ011038603-02")
+        other = g2b.normalize_web_list_row(dict(row, no="2026LCM00732026-15540", ord="01", title="교육생숙소 신축공사"), "나라장터")
+        self.assertNotEqual(gov._key(it), gov._key(other))
+        # 쿼리에 공고번호가 이미 있으면 그대로 둔다
+        lh = g2b.normalize_web_list_row(dict(row, no="2603536", ord="00", link="http://ebid.lh.or.kr/x.dev?bidNum=2603536&bidDegree=00"), "나라장터")
+        self.assertEqual(lh["link"], "http://ebid.lh.or.kr/x.dev?bidNum=2603536&bidDegree=00")
+
+    def test_web_items_uses_cache_falls_back_to_rows_and_retries_resets(self):
+        sess = FakeWebSession({"R26BK01755920": WEB["servc"]}, fail_first=1)
+        rows = [{"no": "R26BK01755920", "ord": "000"},                                 # 상세로 채움(첫 호출은 리셋 → 재시도)
+                {"no": "R26BK01752847", "ord": "000"},                                 # 캐시에 있음 → 호출 없음
+                {"no": "2026SCQ011038603", "ord": "02", "title": "안보교육 안전점검 용역", "org": "해군", "post": "2026/10/02 09:00",
+                 "close": "2026/10/12 10:00", "kind": "일반용역", "link": "http://www.d2b.go.kr/psb/bid/serviceBidAnnounceList.do"},
+                {"no": "R26BK00000001", "ord": "000", "title": "상세가 없는 공고", "post": "2026/10/01 09:00", "close": "2026/10/09 10:00", "kind": "물품"}]
+        cache = {"R26BK01752847-000": WEB["thng"]}
+        with patch.object(g2b.time, "sleep", lambda s: None):
+            items = g2b.web_items(rows, "나라장터", cache=cache, session=sess)
+        self.assertEqual([it["bid_no"] for it in items],
+                         ["R26BK01755920-000", "R26BK01752847-000", "2026SCQ011038603-02", "R26BK00000001-000"])
+        self.assertEqual([c[1] for c in sess.calls], ["R26BK01755920", "R26BK01755920", "R26BK00000001"])
+        self.assertEqual(items[3]["target"], "참가 조건: 원문 확인")                   # 422 → 목록 행으로 대신
+        self.assertIn("R26BK01755920-000", cache)                                      # 받은 상세는 캐시에 남는다
+        self.assertEqual(g2b.web_items.last_stats, {"rows": 4, "items": 4, "fetched": 2, "failed": 0})
+
+    def test_import_command_feeds_the_normal_pipeline(self):
+        import tempfile
+        from src import g2b_web
+        with tempfile.TemporaryDirectory() as tmp:
+            export = os.path.join(tmp, "g2b_export.json")
+            with open(export, "w", encoding="utf-8") as f:
+                json.dump({"rows": [{"no": "R26BK01755920", "ord": "000"},
+                                    {"no": "2026SCQ011038603", "ord": "02", "title": "안보교육 안전점검 용역", "org": "해군",
+                                     "post": "2026/10/02 09:00", "close": "2026/10/12 10:00", "kind": "일반용역",
+                                     "link": "http://www.d2b.go.kr/psb/bid/serviceBidAnnounceList.do"}]}, f, ensure_ascii=False)
+            cache_path = os.path.join(tmp, "cache.json")
+            with open(cache_path, "w", encoding="utf-8") as f:
+                json.dump({"R26BK01755920-000": WEB["servc"]}, f, ensure_ascii=False)
+            out = os.path.join(tmp, "docs")
+            with patch.object(g2b.time, "sleep", lambda s: None):
+                res = g2b_web.run_import(export, details_path=cache_path, out_dir=out, date_override="2026-10-03", dashboard=False)
+            self.assertEqual((res["rows"], res["items"], res["kept"]), (2, 2, 2))
+            archive = json.load(open(os.path.join(out, "gov", "archive.json"), encoding="utf-8"))
+            titles = [it["title"] for it in archive["items"]]
+            self.assertIn("(재공고)2026년 독서통신 교육 위탁 용역(단가계약)", titles)
+            self.assertIn("안보교육 안전점검 용역", titles)
+            row = next(it for it in archive["items"] if "독서통신" in it["title"])
+            self.assertEqual((row["source_id"], row["region"], row["deadline"], row["end"]), ("g2b", "서울·인천·경기", "known", "2026-10-12"))
+            self.assertEqual(row["consortium"]["status"], "불가")
+            self.assertGreaterEqual(row["relevance"], 30)
+            # 카톡으로 나간 것이 아니므로 '이미 보낸 공고' 기록은 만들지 않는다
+            self.assertFalse(os.path.exists(os.path.join(out, "state", "seen_gov.json")))
+            # 'no|ord' 텍스트 목록도 받는다
+            ids = os.path.join(tmp, "ids.txt")
+            with open(ids, "w", encoding="utf-8") as f:
+                f.write("# 주석\nR26BK01755920|000\nR26BK01755920|000\n")
+            self.assertEqual(g2b_web.load_rows(ids), [{"no": "R26BK01755920", "ord": "000"}])
+
+
 if __name__ == "__main__":
     unittest.main()

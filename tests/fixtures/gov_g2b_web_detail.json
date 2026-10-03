@@ -1,0 +1,187 @@
+{
+ "servc": {
+  "dmItemMap": {
+   "bidPbancNo": "R26BK01755920",
+   "bidPbancOrd": "000",
+   "bidPbancNm": "&#40;재공고&#41;2026년 독서통신 교육 위탁 용역&#40;단가계약&#41;",
+   "pbancSttsNm": "재공고",
+   "prcmBsneSeCd": "03",
+   "prcmBsneSeNm": "일반용역",
+   "pbancInstUntyGrpNm": "인천시설공단",
+   "dmstUntyGrpNm": "인천시설공단",
+   "bidMthdNm": "전자입찰",
+   "scsbdMthdNm": "소액수의견적",
+   "slprRcptBgngDt": "2026-10-02 20:00:00",
+   "slprRcptDdlnDt": "2026-10-12 10:00:00",
+   "onbsPrnmntDt": "2026-10-12 11:00:00",
+   "bidQlfcRegDt": "2026-10-11 18:00:00",
+   "pbancKndNm": "실공고&#40;재공고&#41;",
+   "alotBgtAmt": 62400000,
+   "prspPrce": 62400000,
+   "bizAmt": 62400000,
+   "pbancPstgDt": "2026/10/02 19:32:04",
+   "rgnLmtYnNm": "투찰제한",
+   "lcnsLmtYnNm": "투찰제한",
+   "rgnLmtCn": "[서울특별시], [인천광역시], [경기도]",
+   "intpLmtCn": "&lt;p&gt;[ &lt;a href=&#x27;http://www.law.go.kr/법령/평생교육법/제33조&#x27; target=&#x27;_blank&#x27;&gt;평생교육시설&#40;원격&#41;&#40;3156&#41;&lt;/a&gt; ] 업종을 등록한 업체 &lt;/p&gt;",
+   "stdCtrtMthdNm": "수의계약",
+   "ctrtTyNm": "일반단가계약",
+   "jintCtrtCmnMthoNm": "&#40;없음&#41;공동수급불허",
+   "dmstcOvrsSeNm": "국내입찰",
+   "bofcBdngPrmsYnNm": "본사소재지",
+   "itemClsfBdngLmtAtrbNm": "물품분류로 입찰참가 제한하지 않음",
+   "mnftrItemLmtYnNm": "구분없음",
+   "prfmncLmtYnNm": "아니오",
+   "pqscTrgtYnNm": "없음",
+   "bidPrcpLmtYnNm": "제한안함",
+   "pbancPicDeptNm": "재무정보실",
+   "pbancPicTlphNo": "-",
+   "usrDocNoVal": "인천시설공단 공고 제2026-176호",
+   "pbancPicNm": "홍**"
+  },
+  "dmItemLmtList1": [
+   {
+    "bidPbancNo": "R26BK01755920",
+    "bidPbancOrd": "000",
+    "bidLmtKndCd": "입170003",
+    "lmtGupSqno": 1,
+    "lmtSqno": 1,
+    "bidLmtSeCd": "입110002",
+    "bidLmtUntyCd": "1100000000",
+    "bidLmtUntyNm": "서울특별시"
+   },
+   {
+    "bidPbancNo": "R26BK01755920",
+    "bidPbancOrd": "000",
+    "bidLmtKndCd": "입170003",
+    "lmtGupSqno": 1,
+    "lmtSqno": 2,
+    "bidLmtSeCd": "입110002",
+    "bidLmtUntyCd": "2800000000",
+    "bidLmtUntyNm": "인천광역시"
+   },
+   {
+    "bidPbancNo": "R26BK01755920",
+    "bidPbancOrd": "000",
+    "bidLmtKndCd": "입170003",
+    "lmtGupSqno": 1,
+    "lmtSqno": 3,
+    "bidLmtSeCd": "입110002",
+    "bidLmtUntyCd": "4100000000",
+    "bidLmtUntyNm": "경기도"
+   }
+  ],
+  "dmItemLmtList2": [
+   {
+    "bidPbancNo": "R26BK01755920",
+    "bidPbancOrd": "000",
+    "bidLmtKndCd": "입170002",
+    "lmtGupSqno": 1,
+    "lmtGupSqnoNm": "A",
+    "lmtSqno": 1,
+    "bidLmtSeCd": "입110001",
+    "bidLmtUntyCd": "3156",
+    "bidLmtUntyNm": "평생교육시설&#40;원격&#41;"
+   }
+  ],
+  "dmItemList1": [
+   {
+    "ord": "1",
+    "subject": "공고게시",
+    "startDt": "2026/10/02 19:32:04",
+    "endDt": null,
+    "placNm": "국가종합전자조달시스템&#40;나라장터&#41;"
+   },
+   {
+    "ord": "2",
+    "subject": "입찰참가자격등록",
+    "startDt": null,
+    "endDt": "2026/10/11 18:00:00",
+    "placNm": "국가종합전자조달시스템&#40;나라장터&#41;"
+   },
+   {
+    "ord": "4",
+    "subject": "입찰보증서접수",
+    "startDt": null,
+    "endDt": null,
+    "placNm": "국가종합전자조달시스템&#40;나라장터&#41;"
+   },
+   {
+    "ord": "9",
+    "subject": "입찰서제출",
+    "startDt": "2026/10/02 20:00:00",
+    "endDt": "2026/10/12 10:00:00",
+    "placNm": "국가종합전자조달시스템&#40;나라장터&#41;"
+   },
+   {
+    "ord": "12",
+    "subject": "개찰",
+    "startDt": "2026/10/12 11:00:00",
+    "endDt": null,
+    "placNm": "국가종합전자조달시스템&#40;나라장터&#41;"
+   }
+  ],
+  "ErrorMsg": "정상적으로 조회되었습니다.",
+  "ErrorCode": 0
+ },
+ "thng": {
+  "dmItemMap": {
+   "bidPbancNo": "R26BK01752847",
+   "bidPbancOrd": "000",
+   "bidPbancNm": "AI교육 및 학습용 GPU서버 구매",
+   "pbancSttsNm": "등록공고",
+   "prcmBsneSeCd": "01",
+   "prcmBsneSeNm": "물품&#40;내자&#41;",
+   "pbancInstUntyGrpNm": "조달청 대구지방조달청",
+   "dmstUntyGrpNm": "경북대학교 AI부트캠프사업단",
+   "bidMthdNm": "전자입찰",
+   "scsbdMthdNm": "규격가격동시입찰",
+   "slprRcptBgngDt": "2026-10-14 10:00:00",
+   "slprRcptDdlnDt": "2026-10-16 10:00:00",
+   "onbsPrnmntDt": "2026-10-16 11:00:00",
+   "bidQlfcRegDt": "2026-10-15 18:00:00",
+   "pbancKndNm": "실공고&#40;등록공고&#41;",
+   "alotBgtAmt": 119509080,
+   "prspPrce": 107545455,
+   "bizAmt": 118300000,
+   "pbancPstgDt": "2026/10/02 17:00:33",
+   "rgnLmtYnNm": "공고서참조",
+   "lcnsLmtYnNm": "공고서참조",
+   "stdCtrtMthdNm": "제한경쟁",
+   "ctrtTyNm": "총액계약",
+   "jintCtrtCmnMthoNm": "&#40;없음&#41;공동수급불허",
+   "dmstcOvrsSeNm": "국내입찰",
+   "bofcBdngPrmsYnNm": "해당없음",
+   "itemClsfBdngLmtAtrbNm": "물품분류 10자리로 입찰참가 제한함",
+   "mnftrItemLmtYnNm": "구분없음",
+   "prfmncLmtYnNm": "아니오",
+   "pqscTrgtYnNm": "없음",
+   "bidPrcpLmtYnNm": "제한안함",
+   "pbancPicDeptNm": "장비구매과",
+   "pbancPicTlphNo": "-",
+   "emrgPbancYn": "Y"
+  },
+  "dmItemLmtList1": [],
+  "dmItemLmtList2": [],
+  "dmItemItemList": [
+   {
+    "bidPbancNo": "R26BK01752847",
+    "bidPbancOrd": "000",
+    "bidPbancItemSqno": 1,
+    "itemClsfNo": "43211501",
+    "itemClsfNm": "컴퓨터서버",
+    "dtlsPrnmNo": "4321150102",
+    "dtlsPrnmNm": "컴퓨터서버",
+    "prchsDtlItemUprc": 118300000,
+    "prchsDtlItemQty": 1,
+    "prchsDtlItemUntValNm": "식"
+   }
+  ],
+  "ErrorMsg": "정상적으로 조회되었습니다.",
+  "ErrorCode": 0
+ },
+ "missing": {
+  "ErrorMsg": "공고정보가 존재하지 않습니다.",
+  "ErrorCode": -1
+ }
+}

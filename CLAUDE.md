@@ -53,7 +53,7 @@ PC 가 월요일에 꺼져 있었으면 다음 로그온 때 따라잡는다. �
 | 모듈 | 출처 |
 |---|---|
 | `collect_gov.py` | 기업마당(공개 목록 대체 수집) · K-Startup(키) · 고용노동부 RSS · 장애인고용공단 · 한국산업인력공단 · 안전보건공단 |
-| `gov_src_g2b.py` | **나라장터**(키) — 용역·물품·공사 `*PPSSrch` 검색어별 조회 + 면허제한·참가가능지역 공고별 조회(`lookup_max`). 키 없이 받는 길은 없음(차세대 나라장터는 SSO 세션 필요, RSS 없음). 참고: `collect_gov.fetch_g2b` 는 옛 용역 전용 경로, 계약 테스트용 |
+| `gov_src_g2b.py` | **나라장터** — ① API(키): 용역·물품·공사 `*PPSSrch` 검색어별 조회 + 면허제한·참가가능지역 공고별 조회(`lookup_max`) ② 키 없는 반자동: 브라우저 내보내기(`tools/g2b_browser_export.js`) → `python -m src.g2b_web import` 가 상세 XHR(`selectItemAnncMngV.do`, 세션 불필요)로 채움. 참고: `collect_gov.fetch_g2b` 는 옛 용역 전용 경로, 계약 테스트용 |
 | `gov_src_ministry.py` | 과기정통부 · 중기부(RSS+HTML) · 교육부 · **e나라도움→보조금통합포털 bojo.go.kr API** · 산업통상부(**motir.go.kr**) · 문체부(RSS+HTML) · 행안부(RSS+HTML) · 복지부(RSS만 — robots) |
 | `gov_src_ict.py` | NIPA 사업공고+입찰(AI·클라우드 바우처 공고가 여기 올라옴) · NIA · 수출바우처(**robots Crawl-delay 60초**) · 혁신바우처 |
 | `gov_src_agency.py` | 중진공(사이트 JSON API) · 고용24(HRD-Net 통합, GET 쿼리로 열림) · IRIS(접수중 R&D, 접수기간 구조화) |
@@ -64,6 +64,14 @@ PC 가 월요일에 꺼져 있었으면 다음 로그온 때 따라잡는다. �
   **'마감 원문 확인'**. nipa 는 입찰공고가 본문 추출이라 넣지 않았다.
 - 나라장터 어댑터는 참가가능지역을 조회한 공고에 `region`(표준 지역명)을 직접 적는다 — `collect()` 는 어댑터가 적은 region 을 덮어쓰지 않는다.
   `target` 은 정의서 5-1 순서(지역 → 업종 → 공동수급)로 "지역제한: 서울특별시 · 업종: 학원운영업 …" 한 줄. 모르는 것은 '원문 확인'.
+- **나라장터 키 없는 경로(2026-10-03 실물 확인)**: www.g2b.go.kr 목록 XHR(`selectBidPbacScrollTypeList.do`)은 그 브라우저 세션의
+  쿠키+메뉴 헤더가 있어야 응답(없으면 403)하고, 상세 XHR(`ItemBidPbac/selectItemAnncMngV.do`)은 세션 없이 열린다(공고번호·차수만).
+  상세 링크 `/link/PNPE027_01/single/?bidPbancNo=&bidPbancOrd=` 도 로그인 없이 열린다. 연계기관 공고(국방전자조달·LH·한수원 등,
+  공고번호가 R 로 시작하지 않음)는 상세가 422 라 목록 행으로만 넣고, 목록 주소가 하나뿐이면 `#공고번호` 를 붙여 식별자를 가른다.
+  세션 헤더 값은 브라우저 밖으로 꺼내지 않는다 — 그래서 목록은 사람이 연 브라우저가 뽑는다. 첫 가져오기: 2026-10-03, 1개월치 486건.
+  나라장터 공고명에는 발주 기관이 그대로 들어가 `_INSTITUTION_RE` 가 교육청·교육지원청·교육연수원·○○초/중/고등학교를 지운다
+  (안 지우면 통학버스 구매·학교 공사가 전부 '교육' 공고가 된다). 상세의 공동계약 표기(공동수급불허·공동이행·분담이행)는
+  `gov_tags.CONSORTIUM_RULES` 에 들어 있다.
 - robots 가 막아 **넣지 않은 곳**: **S2B 학교장터**(s2b.kr·m.s2b.kr `Disallow: /`, API·RSS 없음 — 공급업체 계정의 관심공고 알림 메일이 유일한 경로) · 데이터바우처(kdata) · 국가평생교육진흥원(nile) · 한국연구재단(nrf, IRIS 가 덮음) · 콘진원(kocca) ·
   창업진흥원 게시판(kised, K-Startup API 가 덮음) · HRD4U. 해외 IP 차단·TLS 로 샌드박스에서 **확인 못 한 곳**: 소진공(semas) ·
   KERIS · 서울경제진흥원(sba) · AI바우처(aivoucher). 사무실 PC(한국 IP)에서 되면 추가.
@@ -99,6 +107,7 @@ PC 가 월요일에 꺼져 있었으면 다음 로그온 때 따라잡는다. �
 | `src/gov_src_ministry.py` `gov_src_ict.py` `gov_src_agency.py` | 추가 출처 15곳 어댑터 (`SOURCES` 레지스트리) |
 | `src/gov_tags.py` | 꼬리표 — 분야·역할·관련도·컨소시엄·규모·자격·지역 근거 |
 | `src/retag.py` | 수집 없이 아카이브 꼬리표만 다시 매기고 대시보드 재생성 |
+| `src/g2b_web.py` | 나라장터 반자동 가져오기 — 브라우저 내보내기(`tools/g2b_browser_export.js`) → 상세 XHR → 아카이브·대시보드 |
 | `src/main.py` | 오케스트레이터 |
 | `src/message.py` | 방별 카톡 메시지 조립 |
 | `src/theme.py` | **공통 디자인 시스템** — 주차 페이지와 대시보드가 함께 씀 |
@@ -118,6 +127,7 @@ python -m src.main --no-state          # '이미 보낸 공고' 기록 안 남�
 python -m src.main --only gov --no-state --out C:\temp\preview   # docs/ 안 건드리고 미리보기
 python -m unittest discover -s tests -p "test_*.py" && node --test tests/gov-dashboard.test.cjs
 python -m src.retag                    # config 의 분야·역할·키워드를 지금 아카이브에 다시 적용 + 대시보드 재생성
+python -m src.g2b_web import g2b_export.json --details .cache/g2b.json --push   # 나라장터 수동 가져오기(키 없을 때)
 python windows/kakao_send.py --local --dry-run   # 전송 없이 대상 확인
 powershell -ExecutionPolicy Bypass -File windows\start_dashboard.ps1
 ```
@@ -168,7 +178,8 @@ PC 의 `C:\Users\user\modu-news` 에서 한 번 `git pull` 해 두는 게 안전
 - `config/rooms.json` 에 실제 단톡방 미지정 (대시보드에서 창 목록으로 선택)
 - 작업 스케줄러 `모두의뉴스_발송` 미등록
 - `C:\Users\user\카카오톡단톡방관리` 는 이 저장소의 8월 5일자 복제본. 이쪽(modu-news)이 본체다.
-- 나라장터 `min_budget`(기본 5천만원)은 임시값 — 실 키로 첫 실행 후 건수 보고 조정
+- 나라장터 자동 수집은 키가 있어야 한다. 키 전까지는 `python -m src.g2b_web import` 로 수동 갱신(월요일 수집 전에 한 번).
+  API 어댑터는 실 키로 호출해 본 적이 없다 — 첫 실행 후 필드명·건수를 보고 손본다
 - 공고 API 응답 필드명은 별칭 목록(`_first`)으로 방어해 뒀지만 실 키로 받아본 뒤 정리 필요
 - 요구사항 정의서 2~4단계(위 '대시보드' 절의 '안 된 것'). 팀 공유 저장은 구글 시트/서버리스 중 택일이 먼저.
 - 샌드박스에서 못 연 출처(소진공·KERIS·서울경제진흥원·AI바우처)를 사무실 PC 에서 확인해 추가
