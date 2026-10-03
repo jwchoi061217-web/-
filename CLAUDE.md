@@ -52,7 +52,8 @@ PC 가 월요일에 꺼져 있었으면 다음 로그온 때 따라잡는다. �
 
 | 모듈 | 출처 |
 |---|---|
-| `collect_gov.py` | 기업마당(공개 목록 대체 수집) · K-Startup(키) · 나라장터(키) · 고용노동부 RSS · 장애인고용공단 · 한국산업인력공단 · 안전보건공단 |
+| `collect_gov.py` | 기업마당(공개 목록 대체 수집) · K-Startup(키) · 고용노동부 RSS · 장애인고용공단 · 한국산업인력공단 · 안전보건공단 |
+| `gov_src_g2b.py` | **나라장터**(키) — 용역·물품·공사 `*PPSSrch` 검색어별 조회 + 면허제한·참가가능지역 공고별 조회(`lookup_max`). 키 없이 받는 길은 없음(차세대 나라장터는 SSO 세션 필요, RSS 없음). 참고: `collect_gov.fetch_g2b` 는 옛 용역 전용 경로, 계약 테스트용 |
 | `gov_src_ministry.py` | 과기정통부 · 중기부(RSS+HTML) · 교육부 · **e나라도움→보조금통합포털 bojo.go.kr API** · 산업통상부(**motir.go.kr**) · 문체부(RSS+HTML) · 행안부(RSS+HTML) · 복지부(RSS만 — robots) |
 | `gov_src_ict.py` | NIPA 사업공고+입찰(AI·클라우드 바우처 공고가 여기 올라옴) · NIA · 수출바우처(**robots Crawl-delay 60초**) · 혁신바우처 |
 | `gov_src_agency.py` | 중진공(사이트 JSON API) · 고용24(HRD-Net 통합, GET 쿼리로 열림) · IRIS(접수중 R&D, 접수기간 구조화) |
@@ -61,7 +62,9 @@ PC 가 월요일에 꺼져 있었으면 다음 로그온 때 따라잡는다. �
   `SOURCES` 항목을 넣고 config 에 id 를 적으면 끝. 상세 본문은 소스별 컨테이너를 먼저 잘라야 메뉴 텍스트가 개요로 안 들어간다.
 - 구조화된 마감(`STRUCTURED_DEADLINE_SOURCES`: bizinfo·kstartup·g2b·gosims·iris)이 아니면 마감이 비었을 때 '상시'가 아니라
   **'마감 원문 확인'**. nipa 는 입찰공고가 본문 추출이라 넣지 않았다.
-- robots 가 막아 **넣지 않은 곳**: 데이터바우처(kdata) · 국가평생교육진흥원(nile) · 한국연구재단(nrf, IRIS 가 덮음) · 콘진원(kocca) ·
+- 나라장터 어댑터는 참가가능지역을 조회한 공고에 `region`(표준 지역명)을 직접 적는다 — `collect()` 는 어댑터가 적은 region 을 덮어쓰지 않는다.
+  `target` 은 정의서 5-1 순서(지역 → 업종 → 공동수급)로 "지역제한: 서울특별시 · 업종: 학원운영업 …" 한 줄. 모르는 것은 '원문 확인'.
+- robots 가 막아 **넣지 않은 곳**: **S2B 학교장터**(s2b.kr·m.s2b.kr `Disallow: /`, API·RSS 없음 — 공급업체 계정의 관심공고 알림 메일이 유일한 경로) · 데이터바우처(kdata) · 국가평생교육진흥원(nile) · 한국연구재단(nrf, IRIS 가 덮음) · 콘진원(kocca) ·
   창업진흥원 게시판(kised, K-Startup API 가 덮음) · HRD4U. 해외 IP 차단·TLS 로 샌드박스에서 **확인 못 한 곳**: 소진공(semas) ·
   KERIS · 서울경제진흥원(sba) · AI바우처(aivoucher). 사무실 PC(한국 IP)에서 되면 추가.
 - 수집 시간: 상세 읽기 `detail_max` 와 0.5초 간격 때문에 전체 10~20분. 수출바우처는 60초 간격이라 1~4분 더.

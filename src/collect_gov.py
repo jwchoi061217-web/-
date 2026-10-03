@@ -138,9 +138,9 @@ STRUCTURED_DEADLINE_SOURCES = {"bizinfo", "kstartup", "g2b", "gosims", "iris"}
 def external_sources() -> dict:
     """다른 모듈에 있는 출처 어댑터 {id: {label, max_items, detail_max, fetch, note}}.
     순환 import 를 피하려고 함수 안에서 들여온다(그 모듈들이 이 모듈을 import 한다)."""
-    from . import gov_src_ministry, gov_src_ict, gov_src_agency
+    from . import gov_src_ministry, gov_src_ict, gov_src_agency, gov_src_g2b
     out = {}
-    for mod in (gov_src_ministry, gov_src_ict, gov_src_agency):
+    for mod in (gov_src_ministry, gov_src_ict, gov_src_agency, gov_src_g2b):
         out.update(getattr(mod, "SOURCES", {}))
     return out
 
@@ -1075,7 +1075,7 @@ def fetch_kosha(cfg: dict, label: str, now: datetime) -> list:
 FETCHERS = {
     "bizinfo": lambda cfg, label, now, kw: fetch_bizinfo(cfg, label, now, kw),
     "kstartup": lambda cfg, label, now, kw: fetch_kstartup(cfg, label),
-    "g2b": lambda cfg, label, now, kw: fetch_g2b(cfg, label, now),
+    # "g2b" 는 gov_src_g2b(용역·물품·공사 + 업종·지역 조회)로 옮겼다. 아래 fetch_g2b 는 옛 용역 전용 경로 — 계약 테스트용으로 남긴다.
     "moel": lambda cfg, label, now, kw: fetch_moel(cfg, label),
     "kead": lambda cfg, label, now, kw: fetch_kead(cfg, label, now, kw),
     "hrdkorea": lambda cfg, label, now, kw: fetch_hrdkorea(cfg, label, now, kw),
@@ -1374,7 +1374,8 @@ def collect(mock_dir: str = None, now: datetime = None, config: dict = None,
         if score <= 0 and hits != ["*"]:
             dropped_zero += 1
             continue
-        it["region"] = detect_region(it)["label"]
+        if not it.get("region"):                    # 어댑터가 참가가능지역을 조회해 적어 둔 값(나라장터)이 우선
+            it["region"] = detect_region(it)["label"]
         gov_tags.annotate(it, cfg)
         matched.append(it)
     ex_note = ", ".join(f"{k} {v}" for k, v in sorted(dropped_ex.items(), key=lambda kv: -kv[1])[:8])

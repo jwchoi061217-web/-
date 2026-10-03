@@ -643,7 +643,7 @@ function detectQuals(it){
   const sq = squash(bodyText(it));
   return (RULES.qualifications || []).filter(q => (q.phrases || []).some(p => sq.includes(squash(p)))).map(q => q.name);
 }
-const REGION_PHRASE = /(소재지?|관내|지역\s*내|비수도권|수도권|본사|사업장|주소지|소재한|소재하는|지역\s*기업|지역\s*(우대|가점))/;
+const REGION_PHRASE = /(소재지?|관내|지역\s*내|비수도권|수도권|본사|사업장|주소지|소재한|소재하는|지역\s*기업|지역\s*(우대|가점)|지역\s*제한|참가\s*가능\s*지역|참가\s*제한)/;
 const REGION_PREF = /(지역|소재|관내|권역).{0,14}(우대|가점)/;
 function regionEvidence(it){
   if(typeof it.region_text === 'string' && it.region_text) return it.region_text;

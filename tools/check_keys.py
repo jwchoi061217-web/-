@@ -203,13 +203,17 @@ def check_kstartup() -> tuple:
     )
 
 
+G2B_SEARCH_URL = "https://apis.data.go.kr/1230000/ad/BidPublicInfoService/getBidPblancListInfoServcPPSSrch"
+
+
 def check_g2b() -> tuple:
+    """수집기(gov_src_g2b)가 실제로 쓰는 검색 오퍼레이션(용역 PPSSrch, 공고명 '교육')으로 확인한다."""
     now = datetime.now(KST)
     return _check_datago(
-        "나라장터", G2B_URL,
+        "나라장터", G2B_SEARCH_URL,
         {
-            "pageNo": 1, "numOfRows": 3, "type": "json", "inqryDiv": 1,
-            "inqryBgnDt": (now - timedelta(days=3)).strftime("%Y%m%d") + "0000",
+            "pageNo": 1, "numOfRows": 3, "type": "json", "inqryDiv": 1, "bidNtceNm": "교육",
+            "inqryBgnDt": (now - timedelta(days=7)).strftime("%Y%m%d") + "0000",
             "inqryEndDt": now.strftime("%Y%m%d") + "2359",
         },
         os.environ.get("DATA_GO_KR_KEY"),
@@ -259,7 +263,7 @@ CHECKS = [
     ("NAVER_CLIENT_ID / SECRET", "네이버 뉴스", check_naver),
     ("BIZINFO_KEY", "기업마당", check_bizinfo),
     ("DATA_GO_KR_KEY", "K-Startup", check_kstartup),
-    ("DATA_GO_KR_KEY", "나라장터(용역)", check_g2b),
+    ("DATA_GO_KR_KEY", "나라장터", check_g2b),
     ("(불필요)", "고용노동부 RSS", check_moel),
 ]
 

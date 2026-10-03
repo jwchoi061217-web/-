@@ -70,8 +70,11 @@
     "bizinfo": {"enabled": true, "label": "기업마당", "max_items": 300, "public_fallback": true, "detail_max": 120,
                 "_설명": "BIZINFO_KEY 가 없으면 공개 목록 페이지로 수집합니다(목록에 키워드가 걸린 공고만 상세를 읽어 개요를 채움, detail_max 건까지). 키를 등록하면 자동으로 공식 API."},
     "kstartup": {"enabled": true, "label": "K-Startup", "max_items": 300, "_설명": "DATA_GO_KR_KEY 필요. 창업진흥원 공고(kised.or.kr 게시판은 robots 금지)는 이 API 가 덮습니다."},
-    "g2b": {"enabled": true, "label": "나라장터(용역)", "max_items": 300, "min_budget": 50000000,
-            "_설명": "DATA_GO_KR_KEY 필요. 추정가격/배정예산이 min_budget 미만이면 제외."},
+    "g2b": {"enabled": true, "label": "나라장터", "max_items": 300, "detail_max": 0,
+            "kinds": ["servc", "thng", "cnstwk"],
+            "search_terms": ["교육", "훈련", "연수", "이러닝", "콘텐츠", "안전보건", "안전교육", "HRD", "장애인", "역량강화", "AI", "디지털"],
+            "min_budget": 0, "min_budget_by_kind": {"cnstwk": 100000000}, "lookup_max": 150,
+            "_설명": "DATA_GO_KR_KEY 필요(공공데이터포털 '조달청_나라장터 입찰공고정보서비스' 활용신청, 자동승인, 1,000건/일). 용역·물품·공사를 search_terms(공고명 일부 일치)마다 서버에서 검색해 받고, 키워드가 걸린 공고는 면허(업종)·참가가능지역을 공고별로 조회해 참가 조건에 적습니다(lookup_max 호출 상한). 예전 5천만 원 하한은 교육 용역을 숨겨 0 으로 내렸고, 공사만 1억 하한입니다. search_terms 를 비우면 기간 전체를 받아 우리 쪽 키워드로 거릅니다(호출 많음). 학교·교육청 입찰은 S2B 학교장터(robots 전면 금지)가 아니라 여기서 잡히는 범위만 들어옵니다."},
     "moel": {"enabled": true, "label": "고용노동부", "max_items": 100},
 
     "msit": {"enabled": true, "label": "과학기술정보통신부", "max_items": 100, "detail_max": 20},
@@ -104,6 +107,6 @@
               "boards": [{"id": "B2025021400001", "name": "공지사항"}, {"id": "B2025021400009", "name": "입찰공고"}],
               "_설명": "사이트가 쓰는 게시판 조회 API 를 그대로 호출(키 불필요). 게시판 ID 는 개편 시 바뀔 수 있습니다."},
 
-    "_미수집_출처": "데이터바우처(kdata.or.kr)·국가평생교육진흥원(nile.or.kr)·한국연구재단(nrf.re.kr)·콘텐츠진흥원(kocca.kr)·창업진흥원 게시판(kised.or.kr)·HRD4U 는 robots.txt 가 수집을 금지합니다(기업마당·IRIS·K-Startup 에 중복 게재되는 공고로 대신). 소상공인진흥공단(semas)·KERIS·서울경제진흥원(sba)·AI바우처(aivoucher)는 해외 IP 차단 또는 TLS 문제로 2026-10-02 샌드박스에서 확인하지 못했습니다 — 사무실 PC 에서 확인 후 추가."
+    "_미수집_출처": "S2B 학교장터(s2b.kr·m.s2b.kr — robots.txt 가 User-agent: * Disallow: / 로 전면 금지, 공개 API·RSS 없음; 학교 입찰은 공급업체 회원의 관심공고 알림 메일로만 받을 수 있음)·데이터바우처(kdata.or.kr)·국가평생교육진흥원(nile.or.kr)·한국연구재단(nrf.re.kr)·콘텐츠진흥원(kocca.kr)·창업진흥원 게시판(kised.or.kr)·HRD4U 는 robots.txt 가 수집을 금지합니다(기업마당·IRIS·K-Startup 에 중복 게재되는 공고로 대신). 소상공인진흥공단(semas)·KERIS·서울경제진흥원(sba)·AI바우처(aivoucher)는 해외 IP 차단 또는 TLS 문제로 2026-10-02 샌드박스에서 확인하지 못했습니다 — 사무실 PC 에서 확인 후 추가."
   }
 }
