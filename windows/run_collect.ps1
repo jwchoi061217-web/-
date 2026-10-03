@@ -35,6 +35,9 @@ if (-not $py) {
 }
 
 Set-Location $root
+# 다른 환경(클라우드 세션 등)에서 올린 코드가 있으면 먼저 받는다 - 옛 코드로 수집하면 docs/ 가 어긋나 push 가 거부된다.
+cmd /c "git pull --rebase --autostash origin main >> `"$log`" 2>&1"
+if ($LASTEXITCODE -ne 0) { Write-Log '[경고] git pull 실패 - 현재 코드로 계속 진행합니다' }
 $env:PYTHONIOENCODING = 'utf-8'
 $env:PYTHONUTF8 = '1'
 Write-Log "수집 시작 (주차 $week)"

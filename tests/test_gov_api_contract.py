@@ -167,9 +167,16 @@ class GovernmentApiContractTests(unittest.TestCase):
             )
 
         self.assertEqual(fresh, [])
-        self.assertEqual(active, existing)
-        self.assertEqual(saved["items"], existing)
-        self.assertCountEqual(archived["items"], existing)
+        # 기존 공고는 그대로 남고(키·제목·마감·seen 보존), 꼬리표(분야·역할·관련도·지역)만 덧붙는다
+        def core(items):
+            return sorted(({k: it[k] for k in ("k", "title", "source", "end", "seen")} for it in items),
+                          key=lambda d: d["k"])
+        self.assertEqual(core(active), core(existing))
+        self.assertEqual(core(saved["items"]), core(existing))
+        self.assertEqual(core(archived["items"]), core(existing))
+        for it in archived["items"]:
+            for tag in ("fields", "roles", "relevance", "region", "consortium"):
+                self.assertIn(tag, it)
         self.assertCountEqual(errors, ["K-Startup", "나라장터(용역)"])
 
     def assert_api_error(self, payload, code, content_type="application/json"):

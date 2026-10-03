@@ -1,6 +1,6 @@
-"""정부지원사업 공고 수집 (7개 소스) · 정규화 · 키워드 점수 · 지역 · 마감 필터 · 신규 판정.
+"""정부지원사업 공고 수집 (22개 소스) · 정규화 · 키워드 점수 · 꼬리표 · 신규(픽) 판정.
 
-소스
+소스 — 이 파일의 7곳 + gov_src_ministry(부처 8곳) · gov_src_ict(ICT 산하·바우처 4곳) · gov_src_agency(산하기관 3곳)
   bizinfo   기업마당 지원사업 공고      BIZINFO_KEY (기업마당 자체 발급 인증키)
   kstartup  창업진흥원 K-Startup 사업공고 DATA_GO_KR_KEY (공공데이터포털)
   g2b       조달청 나라장터 용역 입찰공고 DATA_GO_KR_KEY (금액 하한선 필터)
@@ -11,16 +11,19 @@
 
   기업마당은 BIZINFO_KEY 가 없으면 공개 목록 페이지로 대신 수집한다(public_fallback).
   키 없이도 매주 수집이 돌아가게 하기 위한 장치다 — 키 4개가 전부 미등록인 채로
-  월요일 실행이 8주 연속 실패한 전례가 있다. 2026-09-30 에 추가한 세 기관도 같은 이유로
-  키 없이 돌아가는 공개 경로만 쓴다.
+  월요일 실행이 8주 연속 실패한 전례가 있다. 그 뒤 추가한 기관도 같은 이유로
+  키 없이 돌아가는 공개 경로(RSS·공개 게시판·사이트 자체 API)만 쓴다.
 
-필터 (config/gov_sources.json)
-  keywords.include  키워드별 가중치. 제목·분야·대상·개요에서 걸린 가중치 합이 min_score 이상이면 통과.
-                    (예전 형식인 단순 목록도 받는다 — 가중치 1, min_score 1 로 본다)
-  keywords.exclude  제목·분야에 있으면 점수와 무관하게 제외.
-  region.allow      허용 지역(전국·서울·경기·인천 …). [지역] 표기·소관 광역지자체·제목 지역명으로 판정.
-  region.drop_county  군(郡) 단위 지자체명이 제목에 있으면 제외.
-  min_days_left     마감까지 이 일수 미만이면 신규(주차 페이지·카톡)에서 제외. 모아보기에는 남는다.
+수집 범위와 좁히기 — 2026-10-02 개편 (요구사항 정의서 2026-09-28)
+  수집은 넓게: fields(분야)·keywords.include 의 키워드가 하나라도 걸리고 keywords.exclude(결과 발표·채용 등
+             지원사업이 아닌 글)에 안 걸리면 전부 아카이브에 넣는다. 지역·역할·점수로 수집 단계에서 숨기지 않는다.
+  좁히기는 보여 줄 때만:
+    picks.*   카톡 '이번주 픽'과 주차 페이지(신규)에만 적용 — min_score, exclude(주제별), region.allow/
+              drop_county/keep_min_score, min_days_left. 모아보기(/gov/)는 영향 없음.
+    모아보기   각 브라우저의 설정(관련도 기준·소재지·제외어)으로 기본 화면을 좁힌다. 숨긴 건수를 보여 주고 펼 수 있다.
+  꼬리표(gov_tags): fields(분야, 여러 개) · roles(참여 역할, 여러 개) · relevance(0~100) · region ·
+              consortium · size_req · quals · region_text. 아카이브를 쓸 때마다 전부 다시 매긴다 — 설정을 바꾸면
+              지난 공고에도 반영된다.
 
 저장소
   docs/gov/data.json      진행 중인 공고 (마감되면 빠진다)
@@ -101,10 +104,14 @@ LIST_MAX_PAGES = 15            # 공개 목록 게시판을 넘겨 읽는 최대
 # seen_gov.json 을 무한히 키우지 않기 위한 보관 기간
 SEEN_KEEP_DAYS = 180
 
+DEFAULT_PICKS = {"min_score": 1, "exclude": [], "min_days_left": 0,
+                 "region": {"allow": [], "drop_county": False, "keep_min_score": 0}}
+
 DEFAULT_CONFIG = {
     "days": 7,
-    "min_days_left": 0,
-    "region": {"allow": [], "drop_county": False},
+    "fields": [],
+    "roles": [],
+    "picks": json.loads(json.dumps(DEFAULT_PICKS)),
     "keywords": {"include": {}, "exclude": [], "min_score": 1},
     "sources": {
         "bizinfo": {"enabled": True, "label": "기업마당", "max_items": 300,
@@ -123,7 +130,19 @@ DEFAULT_CONFIG = {
 
 # 마감일을 구조화해 주는 소스. 여기 없는 소스의 공고는 마감일이 비면 '상시'가 아니라
 # '원문 확인'으로 표시한다 — 모르는 것을 상시라고 말하면 안 된다.
-STRUCTURED_DEADLINE_SOURCES = {"bizinfo", "kstartup", "g2b"}
+# gosims(보조금포털 API 접수기간) · iris(rcveEndDe) 도 구조화돼 들어온다. nipa 는 사업공고만 구조화되고
+# 입찰공고는 본문에서 뽑으므로 넣지 않는다(못 찾은 마감을 '상시'로 적게 된다).
+STRUCTURED_DEADLINE_SOURCES = {"bizinfo", "kstartup", "g2b", "gosims", "iris"}
+
+
+def external_sources() -> dict:
+    """다른 모듈에 있는 출처 어댑터 {id: {label, max_items, detail_max, fetch, note}}.
+    순환 import 를 피하려고 함수 안에서 들여온다(그 모듈들이 이 모듈을 import 한다)."""
+    from . import gov_src_ministry, gov_src_ict, gov_src_agency
+    out = {}
+    for mod in (gov_src_ministry, gov_src_ict, gov_src_agency):
+        out.update(getattr(mod, "SOURCES", {}))
+    return out
 
 
 class MissingKey(RuntimeError):
@@ -180,11 +199,14 @@ def _check_xml_api_error(text: str) -> None:
 
 # ── 공통 유틸 ────────────────────────────────────────────────────────────
 
-def normalize_keywords(kw: dict) -> dict:
-    """include 를 {키워드: 가중치} 로 통일한다.
+FIELD_KEYWORD_WEIGHT = 2   # fields 에만 있고 include 에 가중치가 없는 키워드의 관련도 가중치
+
+
+def normalize_keywords(kw: dict, fields: list = None) -> dict:
+    """include 를 {키워드: 가중치} 로 통일하고, fields 의 키워드를 합친다(수집 범위 = 둘의 합집합).
 
     예전 형식(단순 목록)은 가중치 1·min_score 1 로 읽어 동작이 그대로 유지된다.
-    설명용 "_…" 키는 무시한다."""
+    설명용 "_…" 키는 무시한다. min_score 는 이제 수집 기준이 아니라 '기본 화면 관련도 기준'이다."""
     kw = kw or {}
     include = kw.get("include") or {}
     if isinstance(include, list):
@@ -201,27 +223,63 @@ def normalize_keywords(kw: dict) -> dict:
             except (TypeError, ValueError):
                 weights[k] = 1
         min_score = int(kw.get("min_score") or (2 if weights else 1))
+    for f in fields or []:
+        for k in f.get("keywords") or []:
+            k = str(k).strip()
+            if k and k not in weights:
+                weights[k] = FIELD_KEYWORD_WEIGHT
     exclude = [str(k).strip() for k in (kw.get("exclude") or []) if str(k).strip()]
     return {"include": weights, "exclude": exclude, "min_score": min_score}
 
 
+def _clean_rules(rows, key: str = "keywords") -> list:
+    """fields / roles 설정을 [{name, keywords:[…]}] 로 정리한다. 이름 없는 줄은 버린다."""
+    out = []
+    for r in rows or []:
+        if not isinstance(r, dict) or not str(r.get("name") or "").strip():
+            continue
+        kws = [str(k).strip() for k in (r.get(key) or []) if str(k).strip()]
+        out.append({"name": str(r["name"]).strip(), key: kws})
+    return out
+
+
+def normalize_picks(picks: dict, legacy: dict = None) -> dict:
+    """picks(카톡 픽·주차 신규 전용 좁히기) 설정. 옛 설정(최상위 region / min_days_left)도 받아 준다."""
+    picks = dict(picks or {})
+    legacy = legacy or {}
+    region = picks.get("region") or legacy.get("region") or {}
+    out = {
+        "min_score": int(picks.get("min_score") or 1),
+        "exclude": [str(k).strip() for k in (picks.get("exclude") or []) if str(k).strip()],
+        "min_days_left": int(picks.get("min_days_left") or legacy.get("min_days_left") or 0),
+        "region": {"allow": [str(r).strip() for r in (region.get("allow") or []) if str(r).strip()],
+                   "drop_county": bool(region.get("drop_county", False)),
+                   "keep_min_score": int(region.get("keep_min_score") or 0)},
+    }
+    return out
+
+
 def load_config(path: str = CONFIG_PATH) -> dict:
     cfg = json.loads(json.dumps(DEFAULT_CONFIG))  # 깊은 복사
+    for sid, meta in external_sources().items():
+        cfg["sources"].setdefault(sid, {"enabled": True, "label": meta.get("label", sid),
+                                        "max_items": meta.get("max_items", 100),
+                                        "detail_max": meta.get("detail_max", 20)})
     if os.path.exists(path):
         with open(path, encoding="utf-8") as f:
             user = json.load(f)
         cfg["days"] = user.get("days", cfg["days"])
-        cfg["min_days_left"] = int(user.get("min_days_left") or 0)
-        region = user.get("region") or {}
-        cfg["region"] = {"allow": [str(r).strip() for r in (region.get("allow") or []) if str(r).strip()],
-                         "drop_county": bool(region.get("drop_county", False)),
-                         "keep_min_score": int(region.get("keep_min_score") or 0)}
-        cfg["keywords"] = normalize_keywords(user.get("keywords") or {})
+        cfg["fields"] = _clean_rules(user.get("fields"))
+        cfg["roles"] = _clean_rules(user.get("roles"))
+        cfg["keywords"] = normalize_keywords(user.get("keywords") or {}, cfg["fields"])
+        cfg["picks"] = normalize_picks(user.get("picks"), legacy=user)
         for name, over in (user.get("sources") or {}).items():
+            if name.startswith("_") or not isinstance(over, dict):
+                continue
             cfg["sources"].setdefault(name, {}).update(
                 {k: v for k, v in over.items() if not str(k).startswith("_")})
     else:
-        cfg["keywords"] = normalize_keywords(cfg["keywords"])
+        cfg["keywords"] = normalize_keywords(cfg["keywords"], cfg["fields"])
     return cfg
 
 
@@ -629,9 +687,13 @@ def fetch_bizinfo_public(cfg: dict, label: str, now: datetime, keywords: dict) -
     print(f"[gov] {label}: 공개 목록에서 {len(out)}건 읽음 (API 키 없음 → 대체 수집)",
           file=sys.stderr)
 
-    matched = [it for it in out if match_keywords(it, keywords)]
+    # 목록(제목·분야)에 키워드가 하나라도 걸리면 후보다 — 수집 범위는 넓게. 최종 점수는 개요까지 본 뒤 collect() 가 매긴다.
+    def candidate(it):
+        score, hits, excluded = keyword_score(it, keywords)
+        return not excluded and (score > 0 or hits == ["*"])
+    matched = [it for it in out if candidate(it)]
     known = {it.get("k") for it in load_archive()["items"]}
-    todo = [it for it in matched if _key(it) not in known][:BIZINFO_DETAIL_MAX]
+    todo = [it for it in matched if _key(it) not in known][:cfg.get("detail_max", BIZINFO_DETAIL_MAX)]
     for it in todo:
         try:
             it["summary"] = parse_bizinfo_summary(_get_html(it["link"])) or it["summary"]
@@ -1089,21 +1151,62 @@ def _keyword_list(keywords: dict) -> list:
     return list(include.keys()) if isinstance(include, dict) else list(include)
 
 
-def write_archive(current: list, issue_key: str, gov_dir: str, keywords: dict = None) -> list:
+def _title_norm(title: str) -> str:
+    return re.sub(r"[\s\[\]()·,.·ㆍ\-–—:;'\"「」『』]", "", title or "").lower()
+
+
+def merge_duplicates(items: list) -> list:
+    """다른 출처에서 들어온 같은 공고(공고명·마감이 같음)를 1건으로 합치고 출처를 모두 남긴다(FR-OPS-06).
+
+    먼저 본 쪽(seen 이 빠른 쪽, 같으면 원래 순서)을 대표로 두고, 나머지는 대표의 sources 에 붙인다.
+    대표의 비어 있는 개요·마감·대상은 합쳐지는 쪽 값으로 채운다."""
+    by_sig = {}
+    out = []
+    for it in sorted(items, key=lambda x: (x.get("seen") or "9", x.get("k") or "")):
+        sig = (_title_norm(it.get("title")), it.get("end") or "")
+        head = by_sig.get(sig)
+        if head is None or head.get("source") == it.get("source"):
+            by_sig.setdefault(sig, it)
+            out.append(it)
+            continue
+        srcs = head.setdefault("sources", [{"source": head.get("source"), "link": head.get("link")}])
+        if not any(s.get("link") == it.get("link") for s in srcs):
+            srcs.append({"source": it.get("source"), "link": it.get("link")})
+        for f in ("summary", "target", "budget", "start", "end", "field"):
+            if not head.get(f) and it.get(f):
+                head[f] = it[f]
+        head["kw"] = list(dict.fromkeys((head.get("kw") or []) + (it.get("kw") or [])))
+        head["score"] = max(head.get("score") or 0, it.get("score") or 0)
+    return out
+
+
+def write_archive(current: list, issue_key: str, gov_dir: str, keywords: dict = None,
+                  config: dict = None) -> list:
     """아카이브(archive.json)에 합치고, 대시보드용 data.js 와 주차 스냅샷을 쓴다.
 
     data.json 은 마감된 공고를 걷어내지만 아카이브는 지우지 않는다 —
-    '작년 이맘때 어떤 사업이 떴었나'를 다시 찾아볼 수 있어야 하기 때문이다."""
+    '작년 이맘때 어떤 사업이 떴었나'를 다시 찾아볼 수 있어야 하기 때문이다.
+    쓸 때마다 모든 항목의 꼬리표(분야·역할·관련도 …)를 현재 설정으로 다시 매긴다."""
+    from . import gov_tags
+    cfg = config or {}
     by_key = {it["k"]: it for it in load_archive(gov_dir)["items"] if it.get("k")}
     for it in current:
         by_key[it["k"]] = it
-    items = sorted(by_key.values(),
-                   key=lambda it: (it.get("seen") or "", it.get("end") or "9"), reverse=True)
+    items = merge_duplicates(list(by_key.values()))
+    for it in items:
+        gov_tags.annotate(it, cfg)
+        if not it.get("region"):
+            it["region"] = detect_region(it)["label"]
+    items.sort(key=lambda it: (it.get("seen") or "", it.get("end") or "9"), reverse=True)
 
+    src_cfg = cfg.get("sources") or {}
     doc = {
         "updated": datetime.now(KST).isoformat(timespec="seconds"),
         "issue_key": issue_key,
         "keywords": _keyword_list(keywords),
+        "rules": gov_tags.rules_for_dashboard(cfg),
+        "sources": [{"id": sid, "label": s.get("label", sid)} for sid, s in src_cfg.items()
+                    if isinstance(s, dict) and s.get("enabled", True)],
         "items": items,
     }
     body = json.dumps(doc, ensure_ascii=False, separators=(",", ":"))
@@ -1121,15 +1224,18 @@ def write_archive(current: list, issue_key: str, gov_dir: str, keywords: dict = 
 
 
 def update_store(items: list, today: date, issue_key: str, path: str = STORE_PATH,
-                 keywords: dict = None) -> list:
+                 keywords: dict = None, config: dict = None) -> list:
     """이번 실행에서 본 공고를 누적 저장소에 합치고, 마감된 것을 걷어낸다.
 
     매 실행은 최근 며칠치만 가져오므로 3주 전에 뜬 '아직 안 끝난' 공고는
     이번 응답에 없다. 그래서 지우지 않고 쌓아두고, 마감일이 지난 것만 뺀다.
     마감일이 없는 상시 공고는 영원히 남으므로 처음 본 지 오래되면 정리한다.
     """
-    store = load_store(path)
-    by_key = {it["k"]: it for it in store["items"] if it.get("k")}
+    # 기준은 아카이브다. data.json(진행 중)은 아카이브에서 매번 다시 뽑는다 — 둘이 어긋나면 아카이브가 맞다.
+    gov_dir = os.path.dirname(path)
+    by_key = {it["k"]: it for it in load_archive(gov_dir)["items"] if it.get("k")}
+    if not by_key:  # 아카이브가 없는 옛 배포본은 data.json 으로 시작한다
+        by_key = {it["k"]: it for it in load_store(path)["items"] if it.get("k")}
 
     for it in items:
         k = _key(it)
@@ -1139,6 +1245,7 @@ def update_store(items: list, today: date, issue_key: str, path: str = STORE_PAT
             "title": it["title"],
             "link": it.get("link", ""),
             "source": it.get("source", ""),
+            "source_id": it.get("source_id", ""),
             "org": it.get("org", ""),
             "target": it.get("target", ""),
             "budget": it.get("budget", ""),
@@ -1155,13 +1262,21 @@ def update_store(items: list, today: date, issue_key: str, path: str = STORE_PAT
             # 처음 본 날짜는 유지한다 — '이번 주 신규' 판정 기준이다
             "seen": (prev or {}).get("seen") or issue_key,
         }
+        # 다른 출처에서 같은 공고가 들어와 합쳐진 기록(이번 실행 또는 지난 실행)은 유지한다
+        srcs = it.get("sources") or (prev or {}).get("sources")
+        if srcs:
+            by_key[k]["sources"] = srcs
 
     # 아카이브는 마감 여부와 상관없이 전부 남긴다 (마감분을 걷어내기 전에 먼저 쓴다)
-    write_archive(list(by_key.values()), issue_key, os.path.dirname(path), keywords)
+    archived = write_archive(list(by_key.values()), issue_key, gov_dir, keywords, config)
+    return write_store(archived, today, issue_key, path)
 
+
+def write_store(archived: list, today: date, issue_key: str, path: str = STORE_PATH) -> list:
+    """아카이브에서 '진행 중'(마감 전, 또는 마감 모르고 오래되지 않은 것)만 뽑아 data.json 에 쓴다."""
     today_iso = today.isoformat()
     stale = (today - timedelta(days=SEEN_KEEP_DAYS)).isoformat()
-    active = [it for it in by_key.values()
+    active = [it for it in archived
               if (it["end"] >= today_iso if it.get("end") else it.get("seen", "") >= stale)]
     active.sort(key=lambda it: (0, it["end"]) if it.get("end") else (1, it.get("seen") or ""))
 
@@ -1201,17 +1316,20 @@ def collect(mock_dir: str = None, now: datetime = None, config: dict = None,
 
     걸러낸 건수는 collect.last_stats 에 남긴다(관리 대시보드·로그용).
     """
+    from . import gov_tags
     now = now or datetime.now(KST)
     today = now.date()
     cfg = config or load_config()
     days = cfg.get("days", 7)
-    keywords = normalize_keywords(cfg.get("keywords") or {})
-    region_cfg = cfg.get("region") or {}
-    min_left = int(cfg.get("min_days_left") or 0)
+    keywords = normalize_keywords(cfg.get("keywords") or {}, cfg.get("fields"))
+    picks = normalize_picks(cfg.get("picks"), legacy=cfg)
+    region_cfg = picks["region"]
+    min_left = picks["min_days_left"]
+    external = external_sources()
 
-    raw, errors = [], []
+    raw, errors, per_source = [], [], {}
     for name, scfg in cfg["sources"].items():
-        if not scfg.get("enabled", True):
+        if name.startswith("_") or not isinstance(scfg, dict) or not scfg.get("enabled", True):
             continue
         label = scfg.get("label", name)
         scfg = dict(scfg, days=days)
@@ -1224,70 +1342,94 @@ def collect(mock_dir: str = None, now: datetime = None, config: dict = None,
                     items = json.load(f)
                 for it in items:
                     it.setdefault("source", label)
-            else:
+            elif name in FETCHERS:
                 items = FETCHERS[name](scfg, label, now, keywords)
+            elif name in external:
+                items = external[name]["fetch"](scfg, label, now, keywords)
+            else:
+                raise APIResponseError(f"알 수 없는 출처 id '{name}' — 어댑터가 없습니다")
             for it in items:
                 it["source_id"] = name
             print(f"[gov] {label}: {len(items)}건 수집", file=sys.stderr)
             raw.extend(items)
+            per_source[label] = {"ok": True, "count": len(items)}
         except MissingKey as e:
             print(f"[gov] {label} 건너뜀: {e}", file=sys.stderr)
             errors.append(label)
+            per_source[label] = {"ok": False, "count": 0, "why": "키 없음"}
         except Exception as e:  # 소스 하나가 죽어도 발행은 계속한다
             print(f"[gov] {label} 수집 실패: {e}", file=sys.stderr)
             errors.append(label)
+            per_source[label] = {"ok": False, "count": 0, "why": str(e)[:120]}
 
-    # 1) 키워드 점수 — 걸린 키워드와 점수를 항목에 남겨 대시보드·픽 선정에 쓴다
-    matched, dropped_kw, dropped_ex = [], 0, {}
+    # 1) 키워드 — 넓게. 하나라도 걸리면 아카이브에 넣는다(점수는 꼬리표·픽 선정·기본 화면 좁히기에 쓴다).
+    #    제외어(keywords.exclude)는 지원사업이 아닌 글(결과 발표·채용·행정예고)만이다.
+    matched, dropped_zero, dropped_ex = [], 0, {}
     for it in raw:
         score, hits, excluded = keyword_score(it, keywords)
         it["kw"], it["score"] = hits, score
         if excluded:
             dropped_ex[excluded] = dropped_ex.get(excluded, 0) + 1
             continue
-        if score < keywords["min_score"]:
-            dropped_kw += 1
+        if score <= 0 and hits != ["*"]:
+            dropped_zero += 1
             continue
+        it["region"] = detect_region(it)["label"]
+        gov_tags.annotate(it, cfg)
         matched.append(it)
     ex_note = ", ".join(f"{k} {v}" for k, v in sorted(dropped_ex.items(), key=lambda kv: -kv[1])[:8])
-    print(f"[gov] 키워드 필터: {len(raw)}건 → {len(matched)}건 "
-          f"(키워드 {len(keywords['include'])}개, 기준 점수 {keywords['min_score']}, "
-          f"점수 미달 {dropped_kw}건, 제외어 {sum(dropped_ex.values())}건"
+    print(f"[gov] 수집 범위: {len(raw)}건 → {len(matched)}건 "
+          f"(키워드 {len(keywords['include'])}개, 미해당 {dropped_zero}건, 제외어 {sum(dropped_ex.values())}건"
           f"{' — ' + ex_note if ex_note else ''})", file=sys.stderr)
 
-    # 2) 지역 — 전국·허용 지역만, 군 단위 제외
-    regional, dropped_region = [], {}
-    for it in matched:
-        it["region"] = detect_region(it)["label"]
-        ok, why = region_allowed(it, region_cfg)
-        if ok:
-            regional.append(it)
-        else:
-            key = why.split("(")[0]
-            dropped_region[key] = dropped_region.get(key, 0) + 1
-    if region_cfg.get("allow") or region_cfg.get("drop_county"):
-        print(f"[gov] 지역 필터: {len(matched)}건 → {len(regional)}건 "
-              f"(허용 {', '.join(region_cfg.get('allow') or ['전체'])}"
-              + "".join(f" · {k} {v}건" for k, v in dropped_region.items()) + ")", file=sys.stderr)
-
-    # 3) 마감 지난 공고 제외
-    alive = [it for it in regional
+    # 2) 마감 지난 공고 제외
+    alive = [it for it in matched
              if not (it.get("period_end") and it["period_end"] < today.isoformat())]
 
-    # 이번 실행 안에서의 중복 제거 (같은 공고가 여러 소스에 뜨는 경우 포함)
-    seen_keys, seen_titles, unique = set(), set(), []
+    # 이번 실행 안에서의 중복 제거 (같은 공고가 여러 소스에 뜨는 경우 — 출처는 모두 남긴다)
+    seen_keys, by_title, unique = set(), {}, []
     for it in alive:
         k = _key(it)
-        tnorm = re.sub(r"[\s\[\]()·,]", "", it["title"]).lower()
-        if k in seen_keys or tnorm in seen_titles:
+        tnorm = _title_norm(it["title"])
+        if k in seen_keys:
+            continue
+        head = by_title.get(tnorm)
+        if head is not None and head.get("source") != it.get("source"):
+            head.setdefault("sources", [{"source": head.get("source"), "link": head.get("link")}])
+            head["sources"].append({"source": it.get("source"), "link": it.get("link")})
+            continue
+        if head is not None:
             continue
         seen_keys.add(k)
-        seen_titles.add(tnorm)
+        by_title[tnorm] = it
         unique.append(it)
+
+    # 3) 픽(카톡·주차 페이지 신규) 좁히기 — 모아보기 아카이브에는 적용하지 않는다
+    pick_pool, dropped_pick = [], {}
+    for it in unique:
+        why = None
+        hit_ex = next((x for x in picks["exclude"]
+                       if _kw_hit(x, " ".join(str(it.get(f) or "") for f in ("title", "field")))), None)
+        if hit_ex:
+            why = f"주제 제외({hit_ex})"
+        elif (it.get("score") or 0) < picks["min_score"]:
+            why = "점수 미달"
+        else:
+            ok, r_why = region_allowed(it, region_cfg)
+            if not ok:
+                why = r_why
+        if why:
+            key = why.split("(")[0]
+            dropped_pick[key] = dropped_pick.get(key, 0) + 1
+        else:
+            pick_pool.append(it)
+    if dropped_pick:
+        print(f"[gov] 픽 좁히기: {len(unique)}건 → {len(pick_pool)}건 ("
+              + " · ".join(f"{k} {v}건" for k, v in dropped_pick.items()) + ")", file=sys.stderr)
 
     # 지난 주차에 이미 내보낸 공고 제외
     seen = load_seen(state_path)
-    fresh = [it for it in unique if _key(it) not in seen]
+    fresh = [it for it in pick_pool if _key(it) not in seen]
 
     # 4) 마감이 코앞인 공고는 신규(주차 페이지·카톡)에서 뺀다 — 받아 볼 때는 이미 늦다.
     #    모아보기에는 남고(update_store), 다음 주엔 마감돼 있으므로 다시 올라오지도 않는다.
@@ -1306,17 +1448,19 @@ def collect(mock_dir: str = None, now: datetime = None, config: dict = None,
             seen[_key(it)] = today.isoformat()
         save_seen(seen, today, state_path)
 
-    print(f"[gov] 수집 {len(raw)}건 → 키워드 {len(matched)}건 → 지역 {len(regional)}건 "
-          f"→ 유효 {len(alive)}건 → 중복제거 {len(unique)}건 → 신규 {len(fresh)}건 "
-          f"(최근 {days}일 기준)", file=sys.stderr)
+    print(f"[gov] 수집 {len(raw)}건 → 범위 {len(matched)}건 → 유효 {len(alive)}건 → 중복제거 {len(unique)}건 "
+          f"→ 픽 후보 {len(pick_pool)}건 → 신규 {len(fresh)}건 (최근 {days}일 기준)", file=sys.stderr)
     collect.last_stats = {
-        "raw": len(raw), "keyword": len(matched), "region": len(regional), "alive": len(alive),
-        "unique": len(unique), "fresh": len(fresh), "soon_dropped": len(soon),
-        "dropped_by_exclude": dropped_ex, "dropped_by_region": dropped_region,
-        "dropped_low_score": dropped_kw,
+        "raw": len(raw), "keyword": len(matched), "alive": len(alive), "unique": len(unique),
+        "pick_pool": len(pick_pool), "fresh": len(fresh), "soon_dropped": len(soon),
+        "dropped_by_exclude": dropped_ex, "dropped_no_keyword": dropped_zero,
+        "dropped_by_pick": dropped_pick, "per_source": per_source,
+        # 예전 이름(관리 대시보드 호환)
+        "region": len(pick_pool), "dropped_by_region": {k: v for k, v in dropped_pick.items() if "지역" in k or "군" in k},
+        "dropped_low_score": dropped_pick.get("점수 미달", 0),
     }
 
-    active = update_store(unique, today, issue_key or today.isoformat(), store_path, keywords)
+    active = update_store(unique, today, issue_key or today.isoformat(), store_path, keywords, cfg)
     return fresh, errors, active
 
 

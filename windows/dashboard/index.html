@@ -361,14 +361,14 @@ async function saveRooms(){
 /* 소스 */
 function renderSources(){
   const src = (S.sources||{}).sources || {};
-  $('#srcRows').innerHTML = Object.entries(src).map(([k,v]) => `
+  $('#srcRows').innerHTML = Object.entries(src).filter(([k,v]) => !k.startsWith('_') && v && typeof v === 'object').map(([k,v]) => `
     <tr><td><b>${esc(v.label||k)}</b> <span class="muted">${k}</span></td>
       <td><input type="checkbox" ${v.enabled?'checked':''} onchange="setSrc('${k}','enabled',this.checked)"></td>
       <td><input type="number" value="${v.max_items??300}" style="width:90px"
           onchange="setSrc('${k}','max_items',+this.value)"></td>
       <td>${k==='g2b' ? `금액 하한선 <input type="number" value="${v.min_budget??0}" style="width:130px"
             onchange="setSrc('${k}','min_budget',+this.value)"> 원
-            <span class="muted">— 첫 실행 후 실제 건수를 보고 조정하세요</span>` : '<span class="muted">공통 필터 적용 — 키워드 점수 · 지역(전국/수도권) · 마감 3일 (config/gov_sources.json)</span>'}</td>
+            <span class="muted">— 첫 실행 후 실제 건수를 보고 조정하세요</span>` : '<span class="muted">수집은 분야·키워드가 걸리면 전부(아카이브) · 카톡 픽만 picks 규칙(지역·주제 제외·점수·마감 3일)으로 좁힘 — config/gov_sources.json</span>'}</td>
     </tr>`).join('');
 }
 function setSrc(k,f,v){ S.sources.sources[k][f]=v; }

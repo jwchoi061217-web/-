@@ -113,11 +113,16 @@ def _gov_card(cat: str, idx: int, it: dict, today: date) -> str:
         meta_parts.append(region)
     end = fmt_md(it.get("period_end"))
     meta_parts.append(f"신청 ~{end}" if end else _no_deadline_label(it))
+    # 참여 역할 꼬리표(정의서 4장) — 모아보기와 같은 값. 없으면 표시하지 않는다(우열·강조 없음).
+    roles = "".join(f'<span class="badge badge-kw">{esc(r)}</span>' for r in (it.get("roles") or [])[:3])
+    cons = (it.get("consortium") or {}).get("status")
+    if cons == "필수":
+        roles += '<span class="badge badge-attention">컨소시엄 필수</span>'
     return (
         f'<a class="card" href="news/{cat}-{idx}.html">'
         f'<div class="card-head"><h3 class="card-title t-sub-lg">'
         f'<span class="num">{idx:02d}</span>{esc(it["title"])}'
-        f'<span class="badges"><span class="badge {cls}">{esc(label)}</span></span></h3></div>'
+        f'<span class="badges"><span class="badge {cls}">{esc(label)}</span>{roles}</span></h3></div>'
         f'<p class="card-meta t-sm">{esc(" · ".join(meta_parts))}</p></a>'
     )
 
@@ -236,9 +241,15 @@ def _gov_detail(cat: str, idx: int, it: dict, total: int, thumb_url: str,
         period = "상시 접수 / 공고 원문 확인" if it.get("source") in STRUCTURED_DEADLINE_SOURCES \
             else "공고 원문에서 확인"
 
+    cons = (it.get("consortium") or {})
     rows = [("소관기관", it.get("org")), ("지역", it.get("region")),
+            ("참여 역할", " · ".join(it.get("roles") or []) or "역할 미확인"),
+            ("컨소시엄", f"{cons.get('status')} — {cons.get('text')}" if cons.get("text") else
+             ("공고문에 언급 없음 — 원문 확인" if cons.get("status") else None)),
+            ("기업 규모", it.get("size_req")), ("필수 자격", " · ".join(it.get("quals") or [])),
             ("신청기간", f"{period} ({dlabel})"),
             ("지원대상", it.get("target")), ("사업규모", it.get("budget")),
+            ("분야", " · ".join(it.get("fields") or [])),
             ("출처", it.get("source"))]
     kv = "\n".join(f'<div class="spec"><div class="k">{k}</div>'
                    f'<div class="v">{esc(v)}</div></div>' for k, v in rows if v)

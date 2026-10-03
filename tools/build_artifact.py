@@ -14,7 +14,7 @@ import sys
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
-from src import gov_dashboard, theme  # noqa: E402
+from src import gov_dashboard, gov_footer, theme  # noqa: E402
 
 FONT_LINK = ('<link rel="stylesheet" href="https://fonts.googleapis.com/css2?'
              'family=Noto+Sans+KR:wght@400;500;700;800;900&display=swap">')
@@ -24,21 +24,17 @@ def build(out_path: str) -> str:
     with open(os.path.join(ROOT, "docs", "gov", "data.js"), encoding="utf-8") as f:
         data_js = f.read()
 
-    body = (gov_dashboard.BODY
-            .replace("__PROMO_BANNER__", theme.PROMO_BANNER)
-            .replace("__LOGO__", theme.LOGO_LIGHT)
-            .replace("__PROMO_STRIP__", theme.PROMO_STRIP)
-            .replace("__FOOTER__", theme.footer(gov_dashboard.LEGAL_EXTRA)))
+    body = gov_dashboard.render_body(gov_footer.footer())
     marker = '<script src="./data.js"></script>'
     assert marker in body
     body = body.replace(marker, "<script>" + data_js + "</script>")
 
-    css = (theme.CSS_BASE + gov_dashboard.EXTRA_CSS).replace(
+    css = (theme.CSS_BASE + gov_dashboard.EXTRA_CSS + gov_footer.CSS).replace(
         ".topnav{position:sticky;top:0;", ".topnav{position:sticky;top:env(safe-area-inset-top, 0px);")
     css = css.replace("'Pretendard Variable',Pretendard,'Noto Sans KR'",
                       "'Noto Sans KR','Pretendard Variable',Pretendard")
 
-    html = (f"<title>모두의러닝 정부지원사업 아카이브</title>\n{FONT_LINK}\n<style>{css}</style>\n"
+    html = (f"<title>{gov_dashboard.TITLE}</title>\n{FONT_LINK}\n<style>{css}</style>\n"
             f"{body}\n{theme.NAV_SCRIPT}\n")
     os.makedirs(os.path.dirname(os.path.abspath(out_path)), exist_ok=True)
     with open(out_path, "w", encoding="utf-8") as f:

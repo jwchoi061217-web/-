@@ -29,7 +29,7 @@ PICKS_N = 5
 ONE_LINER_MAX = 34
 
 # 마감일이 구조화돼 들어오는 소스. 그 밖의 소스는 마감일이 비면 '상시'가 아니라 '원문 확인'.
-STRUCTURED_DEADLINE_SOURCES = {"기업마당", "K-Startup", "나라장터(용역)"}
+STRUCTURED_DEADLINE_SOURCES = {"기업마당", "K-Startup", "나라장터(용역)", "e나라도움(보조금포털)", "IRIS 사업공고"}
 
 
 def fmt_date_ko(d: date) -> str:
@@ -50,7 +50,7 @@ def fmt_md(iso: str) -> str:
 def deadline_known(item: dict) -> bool:
     """마감일이 비었을 때 '상시'라고 말해도 되는 소스인지."""
     return (item.get("source") in STRUCTURED_DEADLINE_SOURCES
-            or item.get("source_id") in {"bizinfo", "kstartup", "g2b"})
+            or item.get("source_id") in {"bizinfo", "kstartup", "g2b", "gosims", "iris"})
 
 
 def deadline_tag(item: dict) -> str:
